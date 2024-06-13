@@ -8,39 +8,25 @@ import ru.snapix.clan.settings.Settings
  * @author Flaimer
  * @since 2.0.0
  */
-//data class ClanRole(val name: String, val displayName: String, val weight: Int, val permissions: Set<ClanPermission>)
-class ClanRole(val name: String, val displayName: String, val weight: Int, val permissions: Set<ClanPermission>) {
+data class ClanRole(val name: String, val displayName: String, val weight: Int, val permissions: Set<ClanPermission>) {
     fun hasPermission(permission: ClanPermission): Boolean {
         return permissions.contains(permission)
     }
 
     companion object {
-        fun owner() = Settings.config.roles().ownerRole()
-        fun default() = Settings.config.roles().defaultRole()
+        val DEFAULT: ClanRole = Settings.config.roles().defaultRole()
+        val OWNER: ClanRole = Settings.config.roles().ownerRole()
         fun other() = Settings.config.roles().otherRoles()
 
         fun role(name: String): ClanRole {
-            return clanRoles()[name] ?: default()
+            return clanRoles()[name] ?: DEFAULT
         }
 
         private fun clanRoles(): Map<String, ClanRole> {
-            val map = mutableMapOf<String, ClanRole>()
-            owner().run {
-                map[name] = this
-            }
-            default().run {
-                map[name] = this
-            }
-            other().forEach { clanRoles[role.name] = role }
-//            val clanRoles = mutableMapOf<String, ClanRole>()
-//            owner().let {
-//                clanRoles[it.name] = it
-//            }
-//            default().let {
-//                clanRoles[it.name] = it
-//            }
-//            other().forEach { role -> clanRoles[role.name] = role }
-//            return clanRoles
+            val map = mutableMapOf(OWNER.name to OWNER, DEFAULT.name to DEFAULT)
+            other().forEach { map[it.name] = it }
+
+            return map
         }
     }
 }

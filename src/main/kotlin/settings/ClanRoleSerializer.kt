@@ -7,13 +7,6 @@ import space.arim.dazzleconf.serialiser.FlexibleType
 import space.arim.dazzleconf.serialiser.ValueSerialiser
 
 class ClanRoleSerializer : ValueSerialiser<ClanRole> {
-    companion object {
-        private const val NAME = "name"
-        private const val DISPLAY_NAME = "display_name"
-        private const val WEIGHT = "weight"
-        private const val PERMISSIONS = "permissions"
-    }
-
     override fun getTargetClass() = ClanRole::class.java
 
     override fun deserialise(flexibleType: FlexibleType): ClanRole {
@@ -38,4 +31,10 @@ class ClanRoleSerializer : ValueSerialiser<ClanRole> {
         return map
     }
 
+    companion object {
+        private const val NAME = "name"
+        private const val DISPLAY_NAME = "display_name"
+        private const val WEIGHT = "weight"
+        private const val PERMISSIONS = "permissions"
+    }
 }

@@ -2,19 +2,18 @@ package ru.snapix.clan.settings
 
 import ru.snapix.clan.snapiClan
 import ru.snapix.library.Configuration
+import ru.snapix.library.configurationOptions
 import ru.snapix.library.create
-import space.arim.dazzleconf.ConfigurationOptions
 
 object Settings {
-    private val options = ConfigurationOptions.Builder()
-        .addSerialiser(ClanRoleSerializer())
-        .setCreateSingleElementCollections(true)
-        .build()
-    private val mainConfig = Configuration.create("config.yml", MainConfig::class.java, snapiClan)
-    private val messageConfig = Configuration.create("message.yml", MessageConfig::class.java, snapiClan)
-    private val databaseConfig = Configuration.create("database.yml", DatabaseConfig::class.java, snapiClan)
+    private val options = configurationOptions {
+        serializers += ClanRoleSerializer()
+        createSingleElementCollections = true
+    }
+    private val mainConfig = Configuration.create("config.yml", MainConfig::class.java, snapiClan, options)
+    private val messageConfig = Configuration.create("message.yml", MessageConfig::class.java, snapiClan, options)
+    private val databaseConfig = Configuration.create("database.yml", DatabaseConfig::class.java, snapiClan, options)
     val config = mainConfig.data()
     val message = messageConfig.data()
     val database = databaseConfig.data()
-
 }
