@@ -7,6 +7,7 @@ import ru.snapix.clan.api.User
 import ru.snapix.clan.database.ClanDatabase
 import ru.snapix.clan.snapiClan
 import ru.snapix.library.async
+import ru.snapix.library.useAsync
 
 object Clans {
     private const val KEY_REDIS_CLANS = "clan_clans"
@@ -30,8 +31,16 @@ object Clans {
         }
     }
 
+    fun updateClan(clan: Clan) {
+        snapiClan.jedis.useAsync {
+            hset(KEY_REDIS_CLANS, mapOf(clan.name.lowercase() to Json.encodeToString(clan)))
+        }
+    }
+
     fun getClans(): List<Clan> {
-        TODO()
+        return snapiClan.jedis.async {
+            hgetAll(KEY_REDIS_CLANS).values.mapNotNull { Json.decodeFromString<Clan>(it) }
+        }
     }
 
     fun getUser(name: String): User? {
@@ -52,7 +61,15 @@ object Clans {
         }
     }
 
+    fun updateUser(user: User) {
+        snapiClan.jedis.useAsync {
+            hset(KEY_REDIS_USERS, mapOf(user.name.lowercase() to Json.encodeToString(user)))
+        }
+    }
+
     fun getUsers(): List<User> {
-        TODO()
+        return snapiClan.jedis.async {
+            hgetAll(KEY_REDIS_USERS).values.mapNotNull { Json.decodeFromString<User>(it) }
+        }
     }
 }

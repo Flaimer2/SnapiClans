@@ -23,7 +23,7 @@ interface MainConfig {
         fun createCommand(): String
 
         @ConfKey("remove-command")
-        @DefaultString("remove|delete|rem|del")
+        @DefaultString("remove|delete|rem|del|disband")
         fun removeCommand(): String
 
         @ConfKey("invite-command")

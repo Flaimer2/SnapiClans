@@ -5,6 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Clan(val name: String, var displayName: String, val owner: String) {
     fun getUsers(): List<User> {
-        return getUsers { this@Clan.name == clanName }
+        return getUsers { it.clanName == name }
     }
 }

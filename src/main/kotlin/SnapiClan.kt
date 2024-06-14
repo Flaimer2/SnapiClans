@@ -15,7 +15,6 @@ class SnapiClan : JavaPlugin() {
 
     override fun onEnable() {
         ClanDatabase.load()
-        TODO("Make load all clan and user to cache (if proxy (do proxy))")
     }
 
     override fun onDisable() {

@@ -1,5 +1,6 @@
 package ru.snapix.clan.database
 
+import kotlinx.coroutines.flow.*
 import org.intellij.lang.annotations.Language
 import ru.snapix.clan.api.Clan
 import ru.snapix.clan.api.ClanRole
@@ -69,6 +70,18 @@ object ClanDatabase {
 
     fun updateUser(user: User) {
         database.useAsync { execute(UPDATE_USER, user.role, user.name) }
+    }
+
+    fun getClans(): List<Clan> {
+        return database.async {
+            select(SELECT_CLANS).map { Clan(it.getString("name") ?: return@map null, it.getString("display_name") ?: return@map null, it.getString("owner") ?: return@map null) }.filterNotNull().toList()
+        }
+    }
+
+    fun getUsers(): List<User> {
+        return database.async {
+            select(SELECT_USERS).map { User(it.getString("username") ?: return@map null, ClanRole.role(it.getString("role") ?: return@map null), it.getString("clan_name") ?: return@map null) }.filterNotNull().toList()
+        }
     }
 
     @Language("SQL") private val CREATE_TABLE_CLANS = """

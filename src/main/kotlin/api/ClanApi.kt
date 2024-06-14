@@ -22,7 +22,7 @@ fun createUser(name: String, clanName: String, role: ClanRole = ClanRole.DEFAULT
 fun removeClan(name: String) {
     ClanDatabase.removeClan(name)
     Clans.updateClan(name)
-    TODO("Make remove all user from cache")
+    Clans.getUsers()
 }
 
 fun removeUser(name: String) {
@@ -64,10 +64,10 @@ fun getUsers(): List<User> {
     return Clans.getUsers()
 }
 
-fun getClans(block: Clan.() -> Boolean): List<Clan> {
+fun getClans(block: (Clan) -> Boolean): List<Clan> {
     return getClans().filter(block)
 }
 
-fun getUsers(block: User.() -> Boolean): List<User> {
+fun getUsers(block: (User) -> Boolean): List<User> {
     return getUsers().filter(block)
 }
