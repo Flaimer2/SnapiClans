@@ -5,16 +5,15 @@ import kotlinx.serialization.json.Json
 import ru.snapix.clan.api.Clan
 import ru.snapix.clan.api.User
 import ru.snapix.clan.database.ClanDatabase
-import ru.snapix.clan.snapiClan
-import ru.snapix.library.async
-import ru.snapix.library.useAsync
+import ru.snapix.library.redis.async
+import ru.snapix.library.redis.redisClient
 
 object Clans {
     private const val KEY_REDIS_CLANS = "clan_clans"
     private const val KEY_REDIS_USERS = "clan_users"
 
     fun getClan(name: String): Clan? {
-        return snapiClan.jedis.async {
+        return redisClient.async {
             val clan = hget(KEY_REDIS_CLANS, name.lowercase())
 
             if (clan != null) Json.decodeFromString<Clan>(clan) else updateClan(name)
@@ -22,29 +21,32 @@ object Clans {
     }
 
     fun updateClan(name: String): Clan? {
-        return snapiClan.jedis.async {
-            val clan = ClanDatabase.getClan(name)
+        return redisClient.async {
+            val clan = ClanDatabase.clan(name)
 
-            if (clan != null) hset(KEY_REDIS_CLANS, mapOf(name.lowercase() to Json.encodeToString(clan))) else hdel(KEY_REDIS_CLANS, name.lowercase())
+            if (clan != null) hset(KEY_REDIS_CLANS, name.lowercase() to Json.encodeToString(clan)) else hdel(
+                KEY_REDIS_CLANS,
+                name.lowercase()
+            )
 
             clan
         }
     }
 
     fun updateClan(clan: Clan) {
-        snapiClan.jedis.useAsync {
-            hset(KEY_REDIS_CLANS, mapOf(clan.name.lowercase() to Json.encodeToString(clan)))
+        redisClient.async {
+            hset(KEY_REDIS_CLANS, clan.name.lowercase() to Json.encodeToString(clan))
         }
     }
 
     fun getClans(): List<Clan> {
-        return snapiClan.jedis.async {
-            hgetAll(KEY_REDIS_CLANS).values.mapNotNull { Json.decodeFromString<Clan>(it) }
+        return redisClient.async {
+            hvals(KEY_REDIS_CLANS).map { Json.decodeFromString<Clan>(it) }
         }
     }
 
     fun getUser(name: String): User? {
-        return snapiClan.jedis.async {
+        return redisClient.async {
             val user = hget(KEY_REDIS_USERS, name.lowercase())
 
             if (user != null) Json.decodeFromString<User>(user) else updateUser(name)
@@ -52,24 +54,30 @@ object Clans {
     }
 
     fun updateUser(name: String): User? {
-        return snapiClan.jedis.async {
-            val user = ClanDatabase.getUser(name)
+        return redisClient.async {
+            val user = ClanDatabase.user(name)
 
-            if (user != null) hset(KEY_REDIS_USERS, mapOf(name.lowercase() to Json.encodeToString(user))) else hdel(KEY_REDIS_USERS, name.lowercase())
+            if (user != null) hset(KEY_REDIS_USERS, name.lowercase() to Json.encodeToString(user)) else hdel(
+                KEY_REDIS_USERS,
+                name.lowercase()
+            )
 
             user
         }
     }
 
     fun updateUser(user: User) {
-        snapiClan.jedis.useAsync {
-            hset(KEY_REDIS_USERS, mapOf(user.name.lowercase() to Json.encodeToString(user)))
+        redisClient.async {
+            if (user.clan() != null) hset(
+                KEY_REDIS_USERS,
+                user.name.lowercase() to Json.encodeToString(user)
+            ) else hdel(KEY_REDIS_USERS, user.name.lowercase())
         }
     }
 
     fun getUsers(): List<User> {
-        return snapiClan.jedis.async {
-            hgetAll(KEY_REDIS_USERS).values.mapNotNull { Json.decodeFromString<User>(it) }
+        return redisClient.async {
+            hvals(KEY_REDIS_USERS).map { Json.decodeFromString<User>(it) }
         }
     }
 }

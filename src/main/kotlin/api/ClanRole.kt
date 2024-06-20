@@ -14,8 +14,10 @@ data class ClanRole(val name: String, val displayName: String, val weight: Int, 
     }
 
     companion object {
-        val DEFAULT: ClanRole = Settings.config.roles().defaultRole()
-        val OWNER: ClanRole = Settings.config.roles().ownerRole()
+        val DEFAULT: ClanRole
+            get() = Settings.config.roles().defaultRole()
+        val OWNER: ClanRole
+            get() = Settings.config.roles().ownerRole()
         fun other() = Settings.config.roles().otherRoles()
 
         fun role(name: String): ClanRole {

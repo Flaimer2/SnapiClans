@@ -1,124 +1,128 @@
 package ru.snapix.clan.database
 
-import kotlinx.coroutines.flow.*
-import org.intellij.lang.annotations.Language
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.transactions.transaction
 import ru.snapix.clan.api.Clan
 import ru.snapix.clan.api.ClanRole
 import ru.snapix.clan.api.User
 import ru.snapix.clan.settings.Settings
-import ru.snapix.library.database.*
+
+object ClanTable : Table("clan_clans") {
+    val id: Column<Int> = integer("id").autoIncrement()
+    val name: Column<String> = varchar("name", 32).uniqueIndex()
+    val displayName: Column<String> = varchar("display_name", 32)
+    val owner: Column<String> = varchar("owner", 32)
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object UserTable : Table("clan_users") {
+    val username = varchar("username", 32).uniqueIndex()
+    val clanName = reference("clan_name", ClanTable.name, ReferenceOption.CASCADE).uniqueIndex()
+    val role = varchar("role", 32)
+
+    override val primaryKey = PrimaryKey(username)
+}
 
 object ClanDatabase {
     private var database: Database
 
     init {
-        database = initializeDatabase {
-            val config = Settings.database
-            val hostAndPort = config.host().split(":")
-
-            host = hostAndPort[0]
-            port = hostAndPort[1].toInt()
-            database = config.database()
-            username = config.username()
+        val config = Settings.database
+        database = Database.connect(
+            url = "jdbc:mariadb://${config.host()}/${config.database()}",
+            driver = "org.mariadb.jdbc.Driver",
+            user = config.username(),
             password = config.password()
-        }
+        )
     }
 
     fun load() {
-        database.transaction {
-            execute(CREATE_TABLE_CLANS)
-            execute(CREATE_TABLE_USERS)
+        transaction(database) {
+            SchemaUtils.create(ClanTable, UserTable)
         }
     }
 
-    fun unload() {
-        database.close()
-    }
-
-
     fun createClan(clan: Clan) {
-        database.useAsync { execute(CREATE_CLAN, clan.name, clan.displayName, clan.owner) }
+        transaction(database) {
+            ClanTable.insert {
+                it[name] = clan.name
+                it[displayName] = clan.displayName
+                it[owner] = clan.owner
+            }
+        }
     }
 
     fun createUser(user: User) {
-        database.useAsync { execute(CREATE_USER, user.name, user.clanName, user.role.name) }
+        transaction(database) {
+            UserTable.insert {
+                it[username] = user.name
+                it[clanName] = user.clanName
+                it[role] = user.role.name
+            }
+        }
     }
 
     fun removeClan(name: String) {
-        database.useAsync { execute(REMOVE_CLAN, name) }
+        transaction(database) {
+            ClanTable.deleteWhere { ClanTable.name eq name }
+        }
     }
 
     fun removeUser(username: String) {
-        database.useAsync { execute(REMOVE_USER, username) }
+        transaction(database) {
+            UserTable.deleteWhere { UserTable.username eq username }
+        }
     }
 
-    fun getClan(name: String): Clan? {
-        val row = database.async { firstRow(SELECT_CLAN_BY_NAME, name) }
-
-        return Clan(name, row?.getString("display_name") ?: return null, row.getString("owner") ?: return null)
+    fun clan(name: String): Clan? {
+        return transaction(database) {
+            ClanTable.selectAll().where { ClanTable.name eq name }.map {
+                Clan(it[ClanTable.name], it[ClanTable.displayName], it[ClanTable.owner])
+            }
+        }.firstOrNull()
     }
-    
-    fun getUser(username: String): User? {
-        val row = database.async { firstRow(SELECT_USER_BY_NAME, username) }
 
-        return User(username, ClanRole.role(row?.getString("role") ?: return null), row.getString("clan_name") ?: return null)
+    fun user(username: String): User? {
+        return transaction(database) {
+            UserTable.selectAll().where { UserTable.username eq username }.map {
+                User(it[UserTable.username], ClanRole.role(it[UserTable.role]), it[UserTable.clanName])
+            }
+        }.firstOrNull()
     }
 
     fun updateClan(clan: Clan) {
-        database.useAsync { execute(UPDATE_CLAN, clan.displayName, clan.owner, clan.name) }
+        transaction(database) {
+            ClanTable.update({ ClanTable.name eq clan.name }) {
+                it[displayName] = clan.displayName
+                it[owner] = clan.owner
+            }
+        }
     }
 
     fun updateUser(user: User) {
-        database.useAsync { execute(UPDATE_USER, user.role, user.name) }
-    }
-
-    fun getClans(): List<Clan> {
-        return database.async {
-            select(SELECT_CLANS).map { Clan(it.getString("name") ?: return@map null, it.getString("display_name") ?: return@map null, it.getString("owner") ?: return@map null) }.filterNotNull().toList()
+        transaction(database) {
+            UserTable.update({ UserTable.username eq user.name }) {
+                it[role] = user.role.name
+                it[clanName] = user.clanName
+            }
         }
     }
 
-    fun getUsers(): List<User> {
-        return database.async {
-            select(SELECT_USERS).map { User(it.getString("username") ?: return@map null, ClanRole.role(it.getString("role") ?: return@map null), it.getString("clan_name") ?: return@map null) }.filterNotNull().toList()
+    fun clans(): List<Clan> {
+        return transaction(database) {
+            ClanTable.selectAll().map {
+                Clan(it[ClanTable.name], it[ClanTable.displayName], it[ClanTable.owner])
+            }
         }
     }
 
-    @Language("SQL") private val CREATE_TABLE_CLANS = """
-        CREATE TABLE IF NOT EXISTS `clan_clans`
-        (
-            `id` INTEGER NOT NULL AUTO_INCREMENT,
-            `name` VARCHAR(32) NOT NULL,
-            `display_name` VARCHAR(32) NOT NULL,           
-            `owner` VARCHAR(32) NOT NULL,
-            UNIQUE(`name`, `owner`),
-            PRIMARY KEY(`id`)
-        )
-    """.trimIndent()
-    @Language("SQL") private val CREATE_TABLE_USERS = """
-        CREATE TABLE IF NOT EXISTS `clan_users`
-        (
-            `clan_name` VARCHAR(32) NOT NULL,
-            `username` VARCHAR(32) NOT NULL,
-            `role` VARCHAR(32) NOT NULL,
-            UNIQUE(`clan_name`, `username`),
-            FOREIGN KEY (`clan_name`) REFERENCES `clan_clans` (`name`) ON DELETE CASCADE,
-            PRIMARY KEY(`username`)
-        )
-    """.trimIndent()
-
-    @Language("SQL") private const val CREATE_CLAN = "INSERT IGNORE INTO clan_clans(`name`, `display_name`, `owner`) VALUES (?, ?, ?)"
-    @Language("SQL") private const val CREATE_USER = "INSERT IGNORE INTO clan_users(`clan_name`, `username`, `role`) VALUES (?, ?, ?)"
-
-    @Language("SQL") private const val REMOVE_CLAN = "DELETE FROM clan_clans WHERE `name` = ?"
-    @Language("SQL") private const val REMOVE_USER = "DELETE FROM clan_users WHERE `username` = ?"
-
-    @Language("SQL") private const val UPDATE_CLAN = "UPDATE clan_clans SET `display_name` = ?, `owner` = ? WHERE `name` = ?"
-    @Language("SQL") private const val UPDATE_USER = "UPDATE clan_users SET `role` = ? WHERE `name` = ?"
-
-    @Language("SQL") private const val SELECT_CLAN_BY_NAME = "SELECT * FROM clan_clans WHERE `name` = ?"
-    @Language("SQL") private const val SELECT_USER_BY_NAME = "SELECT * FROM clan_users WHERE `username` = ?"
-
-    @Language("SQL") private const val SELECT_CLANS = "SELECT * FROM clan_clans"
-    @Language("SQL") private const val SELECT_USERS = "SELECT * FROM clan_users"
+    fun users(): List<User> {
+        return transaction(database) {
+            UserTable.selectAll().map {
+                User(it[UserTable.username], ClanRole.role(it[UserTable.role]), it[UserTable.clanName])
+            }
+        }
+    }
 }

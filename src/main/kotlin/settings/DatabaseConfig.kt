@@ -1,6 +1,6 @@
 package ru.snapix.clan.settings
 
-import space.arim.dazzleconf.annote.ConfDefault.DefaultString
+import ru.snapix.library.libs.dazzleconf.annote.ConfDefault.DefaultString
 
 interface DatabaseConfig {
     @DefaultString("localhost:3306")

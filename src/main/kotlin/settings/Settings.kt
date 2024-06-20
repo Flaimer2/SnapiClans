@@ -1,9 +1,9 @@
 package ru.snapix.clan.settings
 
 import ru.snapix.clan.snapiClan
-import ru.snapix.library.Configuration
-import ru.snapix.library.configurationOptions
-import ru.snapix.library.create
+import ru.snapix.library.config.Configuration
+import ru.snapix.library.config.configurationOptions
+import ru.snapix.library.config.create
 
 object Settings {
     private val options = configurationOptions {

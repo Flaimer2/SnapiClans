@@ -2,9 +2,9 @@ package ru.snapix.clan.settings
 
 import ru.snapix.clan.api.ClanPermission
 import ru.snapix.clan.api.ClanRole
-import space.arim.dazzleconf.serialiser.Decomposer
-import space.arim.dazzleconf.serialiser.FlexibleType
-import space.arim.dazzleconf.serialiser.ValueSerialiser
+import ru.snapix.library.libs.dazzleconf.serialiser.Decomposer
+import ru.snapix.library.libs.dazzleconf.serialiser.FlexibleType
+import ru.snapix.library.libs.dazzleconf.serialiser.ValueSerialiser
 
 class ClanRoleSerializer : ValueSerialiser<ClanRole> {
     override fun getTargetClass() = ClanRole::class.java
@@ -14,8 +14,11 @@ class ClanRoleSerializer : ValueSerialiser<ClanRole> {
         val name = map[NAME]?.string ?: error("Can't determine name of clan role")
         val displayName = map[DISPLAY_NAME]?.string ?: error("Can't determine display_name of clan role")
         val weight = map[WEIGHT]?.integer ?: error("Can't determine weight of clan role")
-        val permission = map[PERMISSIONS]?.getSet { it.getObject(ClanPermission::class.java) }
-        val permissions: Set<ClanPermission> = if (permission?.map { it.value }?.contains("*") == true) ClanPermission.entries.toSet() else permission ?: emptySet()
+        val s = map[PERMISSIONS]?.getList { obj: FlexibleType -> obj.string }
+        val permissions: Set<ClanPermission> =
+            if (s?.contains("*") == true) ClanPermission.entries.toSet() else map[PERMISSIONS]!!.getSet { flexType ->
+                flexType.getObject(ClanPermission::class.java)
+            } ?: emptySet()
 
         return ClanRole(name, displayName, weight, permissions)
     }

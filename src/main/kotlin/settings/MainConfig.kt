@@ -2,9 +2,9 @@ package ru.snapix.clan.settings
 
 import ru.snapix.clan.api.ClanPermission
 import ru.snapix.clan.api.ClanRole
-import space.arim.dazzleconf.annote.ConfDefault.*
-import space.arim.dazzleconf.annote.ConfKey
-import space.arim.dazzleconf.annote.SubSection
+import ru.snapix.library.libs.dazzleconf.annote.ConfDefault.*
+import ru.snapix.library.libs.dazzleconf.annote.ConfKey
+import ru.snapix.library.libs.dazzleconf.annote.SubSection
 
 interface MainConfig {
     @SubSection
@@ -110,10 +110,13 @@ interface MainConfig {
     }
 
     @ConfKey("chat-format")
-    @DefaultString("%sender% > %message%")
+    @DefaultString("%player_name% > %message%")
     fun chatFormat(): String
 
     @ConfKey("invite-reply-seconds")
     @DefaultInteger(20)
     fun inviteReplySeconds(): Int
+
+    @DefaultBoolean(false)
+    fun isLobby(): Boolean
 }
