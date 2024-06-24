@@ -309,6 +309,14 @@ interface MessageConfig {
                 @DefaultString("&aУспешно удален клан")
                 fun success(): String
             }
+
+            @SubSection
+            fun reload(): ReloadAdminCommand
+            interface ReloadAdminCommand {
+                @ConfKey("success")
+                @DefaultString("&aУспешно перезагружен плагин")
+                fun success(): String
+            }
         }
     }
 }

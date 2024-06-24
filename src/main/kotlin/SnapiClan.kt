@@ -27,6 +27,11 @@ class SnapiClan : JavaPlugin() {
         server.pluginManager.registerEvents(ChatListener(), this)
     }
 
+    fun reload() {
+        Settings.reload()
+        Commands.reload()
+    }
+
     companion object {
         @JvmStatic
         lateinit var instance: SnapiClan

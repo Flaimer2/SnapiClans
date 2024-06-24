@@ -17,6 +17,15 @@ object Commands {
         manager.registerCommand(ClanCommand())
     }
 
+    fun reload() {
+        manager.unregisterCommands()
+        manager.registerCommand(ClanCommand())
+    }
+
+    fun disable() {
+        manager.unregisterCommands()
+    }
+
     private fun registerCommandCompletions() {
         val commandCompletions = manager.commandCompletions
         commandCompletions.registerAsyncCompletion("playerwithoutclan") { context ->
@@ -29,6 +38,9 @@ object Commands {
             val players = players().toMutableList()
             players.removeAll(ClanApi.users().map { it.name })
             if (players.contains(context.player.name)) emptyList<String>() else players
+        }
+        commandCompletions.registerAsyncCompletion("clan") { _ ->
+            ClanApi.clans().map { it.name }
         }
         commandCompletions.registerAsyncCompletion("playerinmyclan") { context ->
             val user = ClanApi.user(context.player.name)

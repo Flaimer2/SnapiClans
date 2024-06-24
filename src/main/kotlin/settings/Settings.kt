@@ -16,4 +16,10 @@ object Settings {
     val config = mainConfig.data()
     val message = messageConfig.data()
     val database = databaseConfig.data()
+
+    fun reload() {
+        mainConfig.reloadConfig()
+        messageConfig.reloadConfig()
+        databaseConfig.reloadConfig()
+    }
 }

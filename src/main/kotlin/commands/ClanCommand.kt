@@ -6,6 +6,7 @@ import ru.snapix.clan.api.ClanApi
 import ru.snapix.clan.api.ClanPermission
 import ru.snapix.clan.api.ClanRole
 import ru.snapix.clan.settings.Settings
+import ru.snapix.clan.snapiClan
 import ru.snapix.library.*
 import ru.snapix.library.libs.commands.BaseCommand
 import ru.snapix.library.libs.commands.annotation.CatchUnknown
@@ -350,7 +351,7 @@ class ClanCommand : BaseCommand() {
     }
 
     @Subcommand("admin disband")
-    @CommandCompletion("@nothing")
+    @CommandCompletion("@clan")
     @CommandPermission("snapiclans.admin.disband")
     fun adminRemoveClan(commandSender: CommandSender, args: Array<String>) {
         val config = admin.disband()
@@ -367,6 +368,16 @@ class ClanCommand : BaseCommand() {
         }
 
         ClanApi.removeClan(nameClan)
+        commandSender.message(config.success())
+    }
+
+    @Subcommand("admin disband")
+    @CommandCompletion("@nothing")
+    @CommandPermission("snapiclans.admin.reload")
+    fun reload(commandSender: CommandSender) {
+        val config = admin.reload()
+
+        snapiClan.reload()
         commandSender.message(config.success())
     }
 }
