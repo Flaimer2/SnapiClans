@@ -22,9 +22,9 @@ interface MainConfig {
         @DefaultString("create")
         fun createCommand(): String
 
-        @ConfKey("remove-command")
-        @DefaultString("remove|delete|rem|del|disband")
-        fun removeCommand(): String
+        @ConfKey("disband-command")
+        @DefaultString("disband")
+        fun disbandCommand(): String
 
         @ConfKey("invite-command")
         @DefaultString("invite")
@@ -45,6 +45,10 @@ interface MainConfig {
         @ConfKey("leave-command")
         @DefaultString("leave")
         fun leaveCommand(): String
+
+        @ConfKey("remove-command")
+        @DefaultString("remove")
+        fun removeCommand(): String
 
         @ConfKey("chat-command")
         @DefaultString("chat")
@@ -95,10 +99,6 @@ interface MainConfig {
         @ConfKey("clan-name")
         @DefaultString("[A-z0-9]{3,16}")
         fun clanName(): String
-
-        @ConfKey("clan-display-name")
-        @DefaultString("[A-zА-я0-9]{3,16})")
-        fun clanDisplayName(): String
     }
 
     @SubSection
@@ -107,6 +107,18 @@ interface MainConfig {
         @ConfKey("create-clan")
         @DefaultInteger(1000)
         fun createClan(): Int
+    }
+
+    @SubSection
+    fun level(): Level
+    interface Level {
+        @ConfKey("create-clan")
+        @DefaultInteger(7)
+        fun createClan(): Int
+
+        @ConfKey("join-clan")
+        @DefaultInteger(7)
+        fun joinClan(): Int
     }
 
     @ConfKey("chat-format")

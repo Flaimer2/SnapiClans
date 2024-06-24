@@ -4,10 +4,7 @@ import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.*
 import ru.snapix.clan.KEY_REDIS_MESSENGER
-import ru.snapix.clan.messenger.actions.Action
-import ru.snapix.clan.messenger.actions.ChatMessageAction
-import ru.snapix.clan.messenger.actions.ResponseInviteAction
-import ru.snapix.clan.messenger.actions.SendInviteAction
+import ru.snapix.clan.messenger.actions.*
 import ru.snapix.clan.snapiClan
 import ru.snapix.library.libs.kreds.connection.AbstractKredsSubscriber
 import ru.snapix.library.redis.async
@@ -18,11 +15,15 @@ object Messenger {
     private val module = SerializersModule {
         polymorphic(Action::class) {
             subclass(ChatMessageAction::class)
-            subclass(SendInviteAction::class)
             subclass(ResponseInviteAction::class)
+            subclass(ResultMessageAction::class)
         }
     }
-    val json = Json { serializersModule = module }
+    val json = Json {
+        serializersModule = module
+        encodeDefaults = true
+        ignoreUnknownKeys = true
+    }
 
     fun enable() {
         subscribe(object : AbstractKredsSubscriber() {
@@ -42,7 +43,7 @@ object Messenger {
             }
 
             override fun onException(ex: Throwable) {
-                logger.info("Exception while handling subscription to redis: ${ex.stackTrace}")
+                logger.severe("Exception while handling subscription to redis: ${ex.stackTrace}")
             }
         }, KEY_REDIS_MESSENGER)
     }

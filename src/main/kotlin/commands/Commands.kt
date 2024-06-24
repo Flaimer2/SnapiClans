@@ -1,9 +1,12 @@
 package ru.snapix.clan.commands
 
+import ru.snapix.clan.api.ClanApi
 import ru.snapix.clan.settings.Settings
 import ru.snapix.clan.snapiClan
 import ru.snapix.library.addReplacements
 import ru.snapix.library.libs.commands.PaperCommandManager
+import ru.snapix.library.players
+
 
 object Commands {
     private val manager = PaperCommandManager(snapiClan)
@@ -14,7 +17,25 @@ object Commands {
         manager.registerCommand(ClanCommand())
     }
 
-    private fun registerCommandCompletions() {}
+    private fun registerCommandCompletions() {
+        val commandCompletions = manager.commandCompletions
+        commandCompletions.registerAsyncCompletion("playerwithoutclan") { context ->
+            val players = players().toMutableList()
+            players.removeAll(ClanApi.users().map { it.name })
+            if (players.contains(context.player.name.lowercase())) emptyList<String>() else players
+        }
+        commandCompletions.registerAsyncCompletion("playerinmyclan") { context ->
+            val user = ClanApi.user(context.player.name)
+            val clan = user?.clan()
+            clan?.users()?.map { it.name }?.filter { !it.equals(user.name, ignoreCase = true) } ?: emptyList<String>()
+        }
+        commandCompletions.registerAsyncCompletion("invitebyreceiver") { context ->
+            ClanApi.getInviteByReceiver(context.player.name).map { it.sender }
+        }
+        commandCompletions.registerAsyncCompletion("nothing") { _ ->
+            emptyList<String>()
+        }
+    }
 
     private fun registerCommandReplacements() {
         val config = Settings.config.alias()
@@ -23,13 +44,14 @@ object Commands {
             "main" to config.mainCommand(),
             "help" to config.helpCommand(),
             "create" to config.createCommand(),
-            "remove" to config.removeCommand(),
+            "disband" to config.disbandCommand(),
             "invite" to config.inviteCommand(),
             "accept" to config.acceptCommand(),
             "decline" to config.declineCommand(),
             "role" to config.roleCommand(),
             "leave" to config.leaveCommand(),
-            "chat" to config.chatCommand()
+            "chat" to config.chatCommand(),
+            "remove" to config.removeCommand()
         )
     }
 }

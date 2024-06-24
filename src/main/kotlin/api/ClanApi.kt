@@ -4,6 +4,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import me.clip.placeholderapi.PlaceholderAPI
 import org.bukkit.ChatColor
 import org.bukkit.entity.Player
@@ -13,15 +15,16 @@ import ru.snapix.clan.database.ClanDatabase
 import ru.snapix.clan.messenger.Messenger
 import ru.snapix.clan.messenger.actions.ChatMessageAction
 import ru.snapix.clan.messenger.actions.ResponseInviteAction
-import ru.snapix.clan.messenger.actions.SendInviteAction
+import ru.snapix.clan.messenger.actions.ResultMessageAction
 import ru.snapix.clan.settings.Settings
 import ru.snapix.library.redis.async
 import ru.snapix.library.redis.redisClient
 import ru.snapix.library.redis.setOption
+import kotlin.time.Duration.Companion.seconds
 
 object ClanApi {
-    fun createClan(name: String, displayName: String, owner: String) {
-        val clan = Clan(name = name, displayName = displayName, owner = owner)
+    fun createClan(name: String, owner: String) {
+        val clan = Clan(name = name, owner = owner)
 
         ClanDatabase.createClan(clan)
         Clans.updateClan(name)
@@ -97,36 +100,72 @@ object ClanApi {
         val msg = if (!sender.hasPermission("snapiclans.chat.color")) "&([A-z0-9])".toRegex()
             .replace(message, "") else ChatColor.translateAlternateColorCodes('&', message)
         val result = PlaceholderAPI.setPlaceholders(sender, format).replace("%message%", msg)
+        Messenger.sendOutgoingMessage(ChatMessageAction(sender.name, receiver, result))
+    }
 
-        Messenger.sendOutgoingMessage(ChatMessageAction(sender.name, receiver.name, result))
+    fun sendResultMessage(sender: String, receiver: String, clan: Clan, message: String) {
+        Messenger.sendOutgoingMessage(ResultMessageAction(sender, receiver, clan, message))
     }
 
     fun sendInvite(clan: Clan, sender: String, receiver: String) {
+        val invite = Invite(sender, receiver, clan)
         redisClient.async {
-            set(
-                KEY_REDIS_INVITE,
-                "$sender:$receiver:${clan.name}",
-                setOption { exSeconds = Settings.config.inviteReplySeconds().toULong() })
+            sadd(KEY_REDIS_INVITE, Json.encodeToString(invite))
             CoroutineScope(Dispatchers.Default).launch {
-                delay(Settings.config.inviteReplySeconds() * 1000L)
+                delay(Settings.config.inviteReplySeconds().seconds)
+
+                if (!hasInvite(sender, receiver)) return@launch
+
+                srem(KEY_REDIS_INVITE, Json.encodeToString(invite))
 
                 val user = user(receiver)
                 if (user == null || user.clan() != clan) {
                     Messenger.sendOutgoingMessage(
                         ResponseInviteAction(
-                            sender,
-                            receiver,
-                            clan.name,
+                            invite,
                             InviteStatus.IGNORE
                         )
                     )
                 }
             }
         }
-        Messenger.sendOutgoingMessage(SendInviteAction(sender, receiver, clan.name))
+        sendResultMessage(sender, receiver, clan, Settings.message.commands().invite().acceptOrDecline())
     }
 
-//    fun acceptInvite(clan: Clan, sender: String, receiver: String) {
-//        Messenger.sendOutgoingMessage()
-//    }
+    fun acceptInvite(invite: Invite) {
+        redisClient.async {
+            srem(KEY_REDIS_INVITE, Json.encodeToString(invite))
+        }
+        createUser(invite.receiver, invite.clan.name)
+        Messenger.sendOutgoingMessage(ResponseInviteAction(invite, InviteStatus.ACCEPT))
+    }
+
+    fun declineInvite(invite: Invite) {
+        redisClient.async {
+            srem(KEY_REDIS_INVITE, Json.encodeToString(invite))
+        }
+        Messenger.sendOutgoingMessage(ResponseInviteAction(invite, InviteStatus.DECLINE))
+    }
+
+    fun getInvite(sender: String, receiver: String): Invite? {
+        return redisClient.async {
+            smembers(KEY_REDIS_INVITE).map { Json.decodeFromString<Invite>(it) }.find { it.sender.equals(sender, ignoreCase = true) && it.receiver.equals(receiver, ignoreCase = true) }
+        }
+    }
+
+    fun getInviteByReceiver(receiver: String): List<Invite> {
+        return redisClient.async {
+            smembers(KEY_REDIS_INVITE).map { Json.decodeFromString<Invite>(it) }.filter { it.receiver.equals(receiver, ignoreCase = true) }
+        }
+    }
+
+    fun getInviteBySender(sender: String): List<Invite> {
+        return redisClient.async {
+            smembers(KEY_REDIS_INVITE).map { Json.decodeFromString<Invite>(it) }.filter { it.sender.equals(sender, ignoreCase = true) }
+        }
+    }
+
+    fun hasInvite(sender: String, receiver: String): Boolean {
+        return getInvite(sender, receiver) != null
+    }
 }

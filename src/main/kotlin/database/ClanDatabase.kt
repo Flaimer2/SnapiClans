@@ -11,7 +11,6 @@ import ru.snapix.clan.settings.Settings
 object ClanTable : Table("clan_clans") {
     val id: Column<Int> = integer("id").autoIncrement()
     val name: Column<String> = varchar("name", 32).uniqueIndex()
-    val displayName: Column<String> = varchar("display_name", 32)
     val owner: Column<String> = varchar("owner", 32)
 
     override val primaryKey = PrimaryKey(id)
@@ -19,7 +18,7 @@ object ClanTable : Table("clan_clans") {
 
 object UserTable : Table("clan_users") {
     val username = varchar("username", 32).uniqueIndex()
-    val clanName = reference("clan_name", ClanTable.name, ReferenceOption.CASCADE).uniqueIndex()
+    val clanName = reference("clan_name", ClanTable.name, ReferenceOption.CASCADE)
     val role = varchar("role", 32)
 
     override val primaryKey = PrimaryKey(username)
@@ -48,7 +47,6 @@ object ClanDatabase {
         transaction(database) {
             ClanTable.insert {
                 it[name] = clan.name
-                it[displayName] = clan.displayName
                 it[owner] = clan.owner
             }
         }
@@ -79,7 +77,7 @@ object ClanDatabase {
     fun clan(name: String): Clan? {
         return transaction(database) {
             ClanTable.selectAll().where { ClanTable.name eq name }.map {
-                Clan(it[ClanTable.name], it[ClanTable.displayName], it[ClanTable.owner])
+                Clan(it[ClanTable.name], it[ClanTable.owner])
             }
         }.firstOrNull()
     }
@@ -95,7 +93,6 @@ object ClanDatabase {
     fun updateClan(clan: Clan) {
         transaction(database) {
             ClanTable.update({ ClanTable.name eq clan.name }) {
-                it[displayName] = clan.displayName
                 it[owner] = clan.owner
             }
         }
@@ -113,7 +110,7 @@ object ClanDatabase {
     fun clans(): List<Clan> {
         return transaction(database) {
             ClanTable.selectAll().map {
-                Clan(it[ClanTable.name], it[ClanTable.displayName], it[ClanTable.owner])
+                Clan(it[ClanTable.name], it[ClanTable.owner])
             }
         }
     }
