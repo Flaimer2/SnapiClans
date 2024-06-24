@@ -22,7 +22,13 @@ object Commands {
         commandCompletions.registerAsyncCompletion("playerwithoutclan") { context ->
             val players = players().toMutableList()
             players.removeAll(ClanApi.users().map { it.name })
-            if (players.contains(context.player.name.lowercase())) emptyList<String>() else players
+            players.remove(context.player.name)
+            players
+        }
+        commandCompletions.registerAsyncCompletion("playerwithoutclanforinvite") { context ->
+            val players = players().toMutableList()
+            players.removeAll(ClanApi.users().map { it.name })
+            if (players.contains(context.player.name)) emptyList<String>() else players
         }
         commandCompletions.registerAsyncCompletion("playerinmyclan") { context ->
             val user = ClanApi.user(context.player.name)

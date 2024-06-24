@@ -119,7 +119,7 @@ class ClanCommand : BaseCommand() {
     }
 
     @Subcommand("%clan_command_invite")
-    @CommandCompletion("@playerwithoutclan @nothing")
+    @CommandCompletion("@playerwithoutclanforinvite @nothing")
     fun invite(player: Player, args: Array<String>) {
         val config = commands.invite()
         val sender = player.name
@@ -324,6 +324,7 @@ class ClanCommand : BaseCommand() {
 
     @Subcommand("admin create")
     @CommandPermission("snapiclans.admin.create")
+    @CommandCompletion("@nothing @playerwithoutclan")
     fun adminCreate(commandSender: CommandSender, args: Array<String>) {
         val config = admin.create()
 
@@ -349,6 +350,7 @@ class ClanCommand : BaseCommand() {
     }
 
     @Subcommand("admin disband")
+    @CommandCompletion("@nothing")
     @CommandPermission("snapiclans.admin.disband")
     fun adminRemoveClan(commandSender: CommandSender, args: Array<String>) {
         val config = admin.disband()
