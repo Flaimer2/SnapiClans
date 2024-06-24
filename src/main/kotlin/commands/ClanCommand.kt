@@ -371,7 +371,7 @@ class ClanCommand : BaseCommand() {
         commandSender.message(config.success())
     }
 
-    @Subcommand("admin disband")
+    @Subcommand("admin reload")
     @CommandCompletion("@nothing")
     @CommandPermission("snapiclans.admin.reload")
     fun reload(commandSender: CommandSender) {
