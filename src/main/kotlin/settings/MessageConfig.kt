@@ -98,6 +98,10 @@ interface MessageConfig {
             @DefaultString("&cУ вас нет разрешения, чтобы отправлять приглашение")
             fun noPermission(): String
 
+            @ConfKey("limit-max-members")
+            @DefaultString("&cВы не можете добавить участника, так как лимит %max_members%")
+            fun limitMaxMembers(): String
+
             @ConfKey("use")
             @DefaultString("&fИспользуйте: /clans invite player")
             fun use(): String
@@ -157,6 +161,10 @@ interface MessageConfig {
             @ConfKey("error-sender-decrease")
             @DefaultString("&aИгрок, который вас пригласил, был понижен, поэтому вы не можете принять его приглашение")
             fun errorDecrease(): String
+
+            @ConfKey("limit-max-members")
+            @DefaultString("&aКлан %clan% не может вас принять, т.к. лимит %max_members%")
+            fun limitMaxMembers(): String
 
             @ConfKey("success")
             @DefaultString("&aВы вступили в клан %clan%")
@@ -272,6 +280,158 @@ interface MessageConfig {
         }
 
         @SubSection
+        fun members(): MembersCommand
+        interface MembersCommand {
+            @ConfKey("no-clan")
+            @DefaultString("&cВы не в клане")
+            fun noClan(): String
+
+            @ConfKey("header")
+            @DefaultStrings("Хедер", "")
+            fun header(): List<String>
+
+            @ConfKey("format")
+            @DefaultString("&f%count%. &a%name% &7- &f%role%")
+            fun format(): String
+
+            @ConfKey("footer")
+            @DefaultStrings("Футер", "")
+            fun footer(): List<String>
+        }
+
+        @SubSection
+        fun info(): InfoCommand
+        interface InfoCommand {
+            @ConfKey("use")
+            @DefaultString("&cВы не в клане. Если вы хотите узнать информацию о клане, используйте: /clan info название")
+            fun use(): String
+
+            @ConfKey("not-found-clan")
+            @DefaultString("&cНе найден клан")
+            fun notFoundClan(): String
+
+            @ConfKey("value")
+            @DefaultStrings("Хедер", "")
+            fun value(): List<String>
+        }
+
+        @SubSection
+        fun roleIncrease(): RoleIncreaseCommand
+        interface RoleIncreaseCommand {
+            @ConfKey("no-clan")
+            @DefaultString("&cВы не в клане")
+            fun noClan(): String
+
+            @ConfKey("no-permission")
+            @DefaultString("&cУ вас нет разрешения, чтобы повышать игроков")
+            fun noPermission(): String
+
+            @ConfKey("use")
+            @DefaultString("&fИспользуйте: /clan role increase player")
+            fun use(): String
+
+            @ConfKey("cannot-self")
+            @DefaultString("&fВы не можете повышать себя")
+            fun cannotSelf(): String
+
+            @ConfKey("player-not-clan")
+            @DefaultString("&fИгрок не в клане")
+            fun playerNotClan(): String
+
+            @ConfKey("player-bigger")
+            @DefaultString("&fУ игрока выше уровень, чем у вас, поэтому вы не можете повысить его уровень")
+            fun playerBigger(): String
+
+            @ConfKey("player-equals")
+            @DefaultString("&fУ игрока такой же как у вас, поэтому вы не можете его повысить")
+            fun playerEquals(): String
+
+            @ConfKey("already-max")
+            @DefaultString("&fУ игрока уже максимальный уровень")
+            fun alreadyMax(): String
+
+            @ConfKey("success")
+            @DefaultString("&fВы успешно повысили игрока")
+            fun success(): String
+
+            @ConfKey("success-for-player")
+            @DefaultString("&fВас повысили в клане")
+            fun successForPlayer(): String
+        }
+
+        @SubSection
+        fun roleDecrease(): RoleDecreaseCommand
+        interface RoleDecreaseCommand {
+            @ConfKey("no-clan")
+            @DefaultString("&cВы не в клане")
+            fun noClan(): String
+
+            @ConfKey("no-permission")
+            @DefaultString("&cУ вас нет разрешения, чтобы понижать игроков")
+            fun noPermission(): String
+
+            @ConfKey("use")
+            @DefaultString("&fИспользуйте: /clan role decrease player")
+            fun use(): String
+
+            @ConfKey("cannot-self")
+            @DefaultString("&fВы не можете понижать себя")
+            fun cannotSelf(): String
+
+            @ConfKey("player-not-clan")
+            @DefaultString("&fИгрок не в клане")
+            fun playerNotClan(): String
+
+            @ConfKey("player-bigger")
+            @DefaultString("&fУ игрока выше уровень, чем у вас, поэтому вы не можете понизить его уровень")
+            fun playerBigger(): String
+
+            @ConfKey("player-equals")
+            @DefaultString("&fУ игрока такой же как у вас, поэтому вы не можете его понизить")
+            fun playerEquals(): String
+
+            @ConfKey("already-min")
+            @DefaultString("&fУ игрока уже минимальный уровень")
+            fun alreadyMin(): String
+
+            @ConfKey("success")
+            @DefaultString("&fВы успешно понизили игрока")
+            fun success(): String
+
+            @ConfKey("success-for-player")
+            @DefaultString("&fВас понизили в клане")
+            fun successForPlayer(): String
+        }
+
+        @SubSection
+        fun tag(): TagCommand
+        interface TagCommand {
+            @ConfKey("no-clan")
+            @DefaultString("&cВы не в клане")
+            fun noClan(): String
+
+            @ConfKey("no-permission")
+            @DefaultString("&cУ вас нет разрешения, чтобы менять тэг клана")
+            fun noPermission(): String
+
+            @ConfKey("use")
+            @DefaultString("&cИспользуйте: /clan tag тэг")
+            fun use(): String
+
+            @ConfKey("tag-used")
+            @DefaultString("&cТэг уже используется")
+            fun tagUsed(): String
+
+            @ConfKey("no-money")
+            @DefaultString("&cБОМЖ!!!")
+            fun noMoney(): String
+
+            @ConfKey("success")
+            @DefaultString("&cТэг успешно установлен")
+            fun success(): String
+        }
+
+        @SubSection
         fun admin(): AdminCommand
         interface AdminCommand {
             @SubSection
@@ -315,6 +475,26 @@ interface MessageConfig {
             interface ReloadAdminCommand {
                 @ConfKey("success")
                 @DefaultString("&aУспешно перезагружен плагин")
+                fun success(): String
+            }
+
+            @SubSection
+            fun createUser(): CreateUserAdminCommand
+            interface CreateUserAdminCommand {
+                @ConfKey("use")
+                @DefaultString("&fИспользуйте: /clan admin createuser clan name role")
+                fun use(): String
+
+                @ConfKey("clan-not-create")
+                @DefaultString("&cКлан c таким именем не существует")
+                fun clanNotCreate(): String
+
+                @ConfKey("already-in-clan")
+                @DefaultString("&cИгрок уже в клане")
+                fun userAlreadyInClan(): String
+
+                @ConfKey("success")
+                @DefaultString("&aУспешно добавлен игрок")
                 fun success(): String
             }
         }

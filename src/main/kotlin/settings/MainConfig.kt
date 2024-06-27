@@ -38,10 +38,6 @@ interface MainConfig {
         @DefaultString("decline")
         fun declineCommand(): String
 
-        @ConfKey("role-command")
-        @DefaultString("role")
-        fun roleCommand(): String
-
         @ConfKey("leave-command")
         @DefaultString("leave")
         fun leaveCommand(): String
@@ -53,6 +49,26 @@ interface MainConfig {
         @ConfKey("chat-command")
         @DefaultString("chat")
         fun chatCommand(): String
+
+        @ConfKey("members-command")
+        @DefaultString("members")
+        fun membersCommand(): String
+
+        @ConfKey("info-command")
+        @DefaultString("info")
+        fun infoCommand(): String
+
+        @ConfKey("role-increase-command")
+        @DefaultString("role increase")
+        fun roleIncreaseCommand(): String
+
+        @ConfKey("role-decrease-command")
+        @DefaultString("role decrease")
+        fun roleDecreaseCommand(): String
+
+        @ConfKey("tag-command")
+        @DefaultString("tag")
+        fun tagCommand(): String
     }
 
     @SubSection
@@ -87,7 +103,7 @@ interface MainConfig {
                     "vice",
                     "Заместитель",
                     3,
-                    setOf(ClanPermission.INVITE, ClanPermission.KICK, ClanPermission.SET_ROLE)
+                    setOf(ClanPermission.INVITE, ClanPermission.KICK, ClanPermission.ROLE_INCREASE, ClanPermission.ROLE_DECREASE)
                 )
             )
         }
@@ -107,6 +123,10 @@ interface MainConfig {
         @ConfKey("create-clan")
         @DefaultInteger(1000)
         fun createClan(): Int
+
+        @ConfKey("tag")
+        @DefaultInteger(1000)
+        fun tag(): Int
     }
 
     @SubSection
@@ -125,10 +145,15 @@ interface MainConfig {
     @DefaultString("%player_name% > %message%")
     fun chatFormat(): String
 
+    @ConfKey("date-format")
+    @DefaultString("dd/MM/yyyy hh:mma")
+    fun dateFormat(): String
+
+    @ConfKey("max-members")
+    @DefaultInteger(10)
+    fun maxMembers(): Int
+
     @ConfKey("invite-reply-seconds")
     @DefaultInteger(20)
     fun inviteReplySeconds(): Int
-
-    @DefaultBoolean(false)
-    fun isLobby(): Boolean
 }

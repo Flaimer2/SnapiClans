@@ -19,12 +19,11 @@ import ru.snapix.clan.messenger.actions.ResultMessageAction
 import ru.snapix.clan.settings.Settings
 import ru.snapix.library.redis.async
 import ru.snapix.library.redis.redisClient
-import ru.snapix.library.redis.setOption
 import kotlin.time.Duration.Companion.seconds
 
 object ClanApi {
     fun createClan(name: String, owner: String) {
-        val clan = Clan(name = name, owner = owner)
+        val clan = Clan(name = name, owner = owner, maxMembers = Settings.config.maxMembers(), dateCreation = System.currentTimeMillis())
 
         ClanDatabase.createClan(clan)
         Clans.updateClan(name)
@@ -53,22 +52,34 @@ object ClanApi {
         Clans.updateUser(name)
     }
 
-    fun updateClan(name: String, block: Clan.() -> Unit) {
-        val clan = clan(name) ?: return
-
+    fun updateClan(clan: Clan, block: Clan.() -> Unit): Clan {
         clan.block()
 
         ClanDatabase.updateClan(clan)
-        Clans.updateClan(name)
+        Clans.updateClan(clan)
+
+        return clan
     }
 
-    fun updateUser(name: String, block: User.() -> Unit) {
-        val user = user(name) ?: return
+    fun updateClan(name: String, block: Clan.() -> Unit): Clan? {
+        val clan = clan(name) ?: return null
+        return updateClan(clan, block)
+    }
 
+    fun updateUser(user: User, block: User.() -> Unit): User {
         user.block()
 
         ClanDatabase.updateUser(user)
-        Clans.updateUser(name)
+        Clans.updateUser(user)
+
+        return user
+    }
+
+    fun updateUser(name: String, block: User.() -> Unit): User? {
+        val user = user(name) ?: return null
+        updateUser(user, block)
+
+        return user
     }
 
     fun clan(name: String): Clan? {
@@ -99,12 +110,14 @@ object ClanApi {
         val format = Settings.config.chatFormat()
         val msg = if (!sender.hasPermission("snapiclans.chat.color")) "&([A-z0-9])".toRegex()
             .replace(message, "") else ChatColor.translateAlternateColorCodes('&', message)
-        val result = PlaceholderAPI.setPlaceholders(sender, format).replace("%message%", msg)
+        val result = ChatColor.translateAlternateColorCodes('&', PlaceholderAPI.setPlaceholders(sender, format)).replace("%message%", msg)
         Messenger.sendOutgoingMessage(ChatMessageAction(sender.name, receiver, result))
     }
 
-    fun sendResultMessage(sender: String, receiver: String, clan: Clan, message: String) {
-        Messenger.sendOutgoingMessage(ResultMessageAction(sender, receiver, clan, message))
+    fun sendResultMessage(sender: String, receiver: String, clan: Clan, message: String, vararg pairs: Pair<String, Any>) {
+        var result = message
+        pairs.forEach { result = result.replace("%${it.first}%", it.second.toString(), ignoreCase = true) }
+        Messenger.sendOutgoingMessage(ResultMessageAction(sender, receiver, clan, result))
     }
 
     fun sendInvite(clan: Clan, sender: String, receiver: String) {
@@ -129,7 +142,7 @@ object ClanApi {
                 }
             }
         }
-        sendResultMessage(sender, receiver, clan, Settings.message.commands().invite().acceptOrDecline())
+        sendResultMessage(sender, receiver, clan, Settings.message.commands().invite().acceptOrDecline(), "name" to sender, "clan" to clan)
     }
 
     fun acceptInvite(invite: Invite) {

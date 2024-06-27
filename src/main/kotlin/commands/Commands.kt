@@ -7,18 +7,12 @@ import ru.snapix.library.addReplacements
 import ru.snapix.library.libs.commands.PaperCommandManager
 import ru.snapix.library.players
 
-
 object Commands {
     private val manager = PaperCommandManager(snapiClan)
 
     fun enable() {
         registerCommandCompletions()
         registerCommandReplacements()
-        manager.registerCommand(ClanCommand())
-    }
-
-    fun reload() {
-        manager.unregisterCommands()
         manager.registerCommand(ClanCommand())
     }
 
@@ -66,10 +60,14 @@ object Commands {
             "invite" to config.inviteCommand(),
             "accept" to config.acceptCommand(),
             "decline" to config.declineCommand(),
-            "role" to config.roleCommand(),
             "leave" to config.leaveCommand(),
             "chat" to config.chatCommand(),
-            "remove" to config.removeCommand()
+            "remove" to config.removeCommand(),
+            "members" to config.membersCommand(),
+            "info" to config.infoCommand(),
+            "role_increase" to config.roleIncreaseCommand(),
+            "role_decrease" to config.roleDecreaseCommand(),
+            "tag" to config.tagCommand(),
         )
     }
 }

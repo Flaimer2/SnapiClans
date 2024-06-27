@@ -24,9 +24,20 @@ data class ClanRole(val name: String, val displayName: String, val weight: Int, 
             return clanRoles()[name] ?: DEFAULT
         }
 
+        fun role(weight: Int): ClanRole?  {
+            return clanRolesWithWeight()[weight]
+        }
+
         private fun clanRoles(): Map<String, ClanRole> {
             val map = mutableMapOf(OWNER.name to OWNER, DEFAULT.name to DEFAULT)
             other().forEach { map[it.name] = it }
+
+            return map
+        }
+
+        private fun clanRolesWithWeight(): Map<Int, ClanRole> {
+            val map = mutableMapOf(OWNER.weight to OWNER, DEFAULT.weight to DEFAULT)
+            other().forEach { map[it.weight] = it }
 
             return map
         }

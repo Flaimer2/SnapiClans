@@ -7,11 +7,12 @@ import ru.snapix.clan.database.ClanDatabase
 import ru.snapix.clan.listeners.ChatListener
 import ru.snapix.clan.messenger.Messenger
 import ru.snapix.clan.settings.Settings
+import ru.snapix.library.ServerType
+import ru.snapix.library.snapiLibrary
 
 class SnapiClan : JavaPlugin() {
     override fun onLoad() {
         instance = this
-        Settings
     }
 
     override fun onEnable() {
@@ -19,17 +20,17 @@ class SnapiClan : JavaPlugin() {
         Commands.enable()
         Messenger.enable()
 
-        if (Settings.config.isLobby()) {
+        if (snapiLibrary.serverType == ServerType.LOBBY) {
             ClanDatabase.clans().forEach { Clans.updateClan(it) }
             ClanDatabase.users().forEach { Clans.updateUser(it) }
         }
 
         server.pluginManager.registerEvents(ChatListener(), this)
+        ClanExpansion().register()
     }
 
     fun reload() {
         Settings.reload()
-        Commands.reload()
     }
 
     companion object {

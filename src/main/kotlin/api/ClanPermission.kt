@@ -11,5 +11,7 @@ enum class ClanPermission(val value: String) {
     INVITE("invite"),
     KICK("kick"),
     DISBAND("disband"),
-    SET_ROLE("set_role")
+    ROLE_INCREASE("role_increase"),
+    ROLE_DECREASE("role_decrease"),
+    SET_TAG("set_tag")
 }

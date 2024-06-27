@@ -12,6 +12,9 @@ object ClanTable : Table("clan_clans") {
     val id: Column<Int> = integer("id").autoIncrement()
     val name: Column<String> = varchar("name", 32).uniqueIndex()
     val owner: Column<String> = varchar("owner", 32)
+    val maxMembers: Column<Int> = integer("max_members")
+    val tag: Column<String?> = varchar("tag", 32).nullable().uniqueIndex()
+    val dateCreation: Column<Long> = long("date_creation")
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -48,6 +51,8 @@ object ClanDatabase {
             ClanTable.insert {
                 it[name] = clan.name
                 it[owner] = clan.owner
+                it[maxMembers] = clan.maxMembers
+                it[dateCreation] = clan.dateCreation
             }
         }
     }
@@ -77,7 +82,7 @@ object ClanDatabase {
     fun clan(name: String): Clan? {
         return transaction(database) {
             ClanTable.selectAll().where { ClanTable.name eq name }.map {
-                Clan(it[ClanTable.name], it[ClanTable.owner])
+                it.toClan()
             }
         }.firstOrNull()
     }
@@ -85,7 +90,7 @@ object ClanDatabase {
     fun user(username: String): User? {
         return transaction(database) {
             UserTable.selectAll().where { UserTable.username eq username }.map {
-                User(it[UserTable.username], ClanRole.role(it[UserTable.role]), it[UserTable.clanName])
+               it.toUser()
             }
         }.firstOrNull()
     }
@@ -94,6 +99,7 @@ object ClanDatabase {
         transaction(database) {
             ClanTable.update({ ClanTable.name eq clan.name }) {
                 it[owner] = clan.owner
+                it[maxMembers] = clan.maxMembers
             }
         }
     }
@@ -109,17 +115,21 @@ object ClanDatabase {
 
     fun clans(): List<Clan> {
         return transaction(database) {
-            ClanTable.selectAll().map {
-                Clan(it[ClanTable.name], it[ClanTable.owner])
-            }
+            ClanTable.selectAll().map { it.toClan() }
         }
     }
 
     fun users(): List<User> {
         return transaction(database) {
-            UserTable.selectAll().map {
-                User(it[UserTable.username], ClanRole.role(it[UserTable.role]), it[UserTable.clanName])
-            }
+            UserTable.selectAll().map { it.toUser() }
         }
+    }
+
+    private fun ResultRow.toClan(): Clan {
+        return Clan(this[ClanTable.name], this[ClanTable.owner], this[ClanTable.maxMembers], this[ClanTable.tag], this[ClanTable.dateCreation])
+    }
+
+    private fun ResultRow.toUser(): User {
+        return User(this[UserTable.username], ClanRole.role(this[UserTable.role]), this[UserTable.clanName])
     }
 }

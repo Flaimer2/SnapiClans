@@ -2,9 +2,8 @@ package ru.snapix.clan.commands
 
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
-import ru.snapix.clan.api.ClanApi
-import ru.snapix.clan.api.ClanPermission
-import ru.snapix.clan.api.ClanRole
+import ru.snapix.clan.api.*
+import ru.snapix.clan.placeholder
 import ru.snapix.clan.settings.Settings
 import ru.snapix.clan.snapiClan
 import ru.snapix.library.*
@@ -18,9 +17,12 @@ import ru.snapix.library.libs.commands.annotation.Subcommand
 
 @CommandAlias("%clan_command_main")
 class ClanCommand : BaseCommand() {
-    private val config = Settings.config
-    private val message = Settings.message
-    private val commands = message.commands()
+    private val config
+        get() = Settings.config
+    private val message
+        get() = Settings.message
+    private val commands
+        get() = message.commands()
 
     @CatchUnknown
     @Default
@@ -64,12 +66,12 @@ class ClanCommand : BaseCommand() {
 
         player.withdrawMoney(
             amount = this.config.economy().createClan(),
-            success = {
-                ClanApi.createClan(name = name, owner = player.name)
-                player.message(config.success())
+            success = { p ->
+                ClanApi.createClan(name = name, owner = p.name)
+                p.message(config.success(), *ClanApi.clan(name).placeholder(), *ClanApi.user(p.name).placeholder())
             },
-            fail = {
-                player.message(config.noMoney())
+            fail = { p ->
+                p.message(config.noMoney(), "money" to p.getMoney())
             }
         )
     }
@@ -78,25 +80,29 @@ class ClanCommand : BaseCommand() {
     @CommandCompletion("@nothing")
     fun removeClan(player: Player, args: Array<String>) {
         val config = commands.removeClan()
-        val user = ClanApi.user(player.name)
 
-        if (user == null) {
+        val user = ClanApi.user(player.name)
+        val clan = user?.clan()
+
+        if (clan == null) {
             player.message(config.noClan())
             return
         }
 
+        val placeholder = arrayOf(*clan.placeholder(), *user.placeholder())
+
         if (!user.hasPermission(ClanPermission.DISBAND)) {
-            player.message(config.noPermission())
+            player.message(config.noPermission(), *placeholder)
             return
         }
 
         if (args.size == 1 && args[0].lowercase() == "accept") {
             ClanApi.removeClan(user.clanName)
-            player.message(config.success())
+            player.message(config.success(), *placeholder)
             return
         }
 
-        player.message(config.accept())
+        player.message(config.accept(), *placeholder)
     }
 
     @Subcommand("%clan_command_chat")
@@ -132,54 +138,61 @@ class ClanCommand : BaseCommand() {
             return
         }
 
+        val placeholder = arrayOf(*clan.placeholder(), *user.placeholder())
+
         if (!user.hasPermission(ClanPermission.INVITE)) {
-            player.message(config.noPermission())
+            player.message(config.noPermission(), *placeholder)
+            return
+        }
+
+        if (clan.users().size >= clan.maxMembers) {
+            player.message(config.limitMaxMembers(), *placeholder)
             return
         }
 
         if (args.isEmpty()) {
-            player.message(config.use())
+            player.message(config.use(), *placeholder)
             return
         }
 
         var receiver = args[0]
         if (receiver.equals(player.name, ignoreCase = true)) {
-            player.message(config.cannotSelf())
+            player.message(config.cannotSelf(), *placeholder)
             return
         }
 
         val networkReceiver = NetworkPlayer(receiver)
 
         if (!networkReceiver.isExist()) {
-            player.message(config.notExist(), "name" to receiver)
+            player.message(config.notExist(), "receiver" to receiver, *placeholder)
             return
         }
 
         receiver = networkReceiver.name()
 
         if (!networkReceiver.isOnline()) {
-            player.message(config.offline(), "name" to receiver)
+            player.message(config.offline(), "receiver" to receiver, *placeholder)
             return
         }
 
         val level = networkReceiver.getLevel()
         if (level < this.config.level().joinClan()) {
-            player.message(config.playerLevelLow(), "name" to receiver, "level" to level)
+            player.message(config.playerLevelLow(), "receiver" to receiver, "level" to level, *placeholder)
             return
         }
 
         if (ClanApi.user(receiver) != null) {
-            player.message(config.alreadyClan(), "name" to receiver)
+            player.message(config.alreadyClan(), "receiver" to receiver, *placeholder)
             return
         }
 
         if (ClanApi.hasInvite(sender, receiver)) {
-            player.message(config.alreadyInvite(), "name" to receiver)
+            player.message(config.alreadyInvite(), "receiver" to receiver, *placeholder)
             return
         }
 
         ClanApi.sendInvite(clan, sender, receiver)
-        player.message(config.success())
+        player.message(config.success(), "receiver" to receiver, *placeholder)
     }
 
     @Subcommand("%clan_command_accept")
@@ -188,8 +201,7 @@ class ClanCommand : BaseCommand() {
         val config = commands.accept()
         val receiver = player.name
 
-        val user = ClanApi.user(receiver)
-        if (user != null) {
+        if (ClanApi.user(receiver) != null) {
             player.message(config.alreadyClan())
             return
         }
@@ -203,25 +215,32 @@ class ClanCommand : BaseCommand() {
 
         val invite = ClanApi.getInvite(sender, receiver)
         if (invite == null) {
-            player.message(config.notInvite(), "name" to sender)
+            player.message(config.notInvite(), "sender" to sender)
             return
         }
 
+        val placeholder = invite.placeholder()
         sender = invite.sender
 
         val senderUser = ClanApi.user(sender)
-        if (senderUser == null || senderUser.clan() != invite.clan) {
-            player.message(config.errorNotInClan(), "name" to sender)
+        val senderClan = senderUser?.clan()
+        if (senderClan == null || senderClan.name != invite.clan.name) {
+            player.message(config.errorNotInClan(), *placeholder)
             return
         }
 
         if (!senderUser.hasPermission(ClanPermission.INVITE)) {
-            player.message(config.errorDecrease(), "name" to sender)
+            player.message(config.errorDecrease(), *placeholder)
+            return
+        }
+
+        if (senderClan.users().size >= senderClan.maxMembers) {
+            player.message(config.limitMaxMembers(), *placeholder)
             return
         }
 
         ClanApi.acceptInvite(invite)
-        player.message(config.success(), "name" to sender, "clan" to invite.clan.name)
+        player.message(config.success(), *placeholder)
     }
 
     @Subcommand("%clan_command_decline")
@@ -234,18 +253,18 @@ class ClanCommand : BaseCommand() {
             player.message(config.use())
             return
         }
-        var sender = args[0]
+        val sender = args[0]
 
         val invite = ClanApi.getInvite(sender, receiver)
         if (invite == null) {
-            player.message(config.notInvite(), "name" to sender)
+            player.message(config.notInvite(), "sender" to sender)
             return
         }
 
-        sender = invite.sender
+        val placeholder = invite.placeholder()
 
         ClanApi.declineInvite(invite)
-        player.message(config.success(), "name" to sender, "clan" to invite.clan.name)
+        player.message(config.success(), *placeholder)
     }
 
     @Subcommand("%clan_command_leave")
@@ -260,13 +279,15 @@ class ClanCommand : BaseCommand() {
             return
         }
 
+        val placeholder = arrayOf(*clan.placeholder(), *user.placeholder())
+
         if (user.role == ClanRole.OWNER) {
-            player.message(config.cantLeave())
+            player.message(config.cantLeave(), *placeholder)
             return
         }
 
         ClanApi.removeUser(user.name)
-        player.message(config.success(), "clan" to clan.name)
+        player.message(config.success(), *placeholder)
     }
 
     @Subcommand("%clan_command_remove")
@@ -283,19 +304,21 @@ class ClanCommand : BaseCommand() {
             return
         }
 
+        var placeholder = arrayOf(*clan.placeholder(), *user.placeholder())
+
         if (!user.hasPermission(ClanPermission.KICK)) {
-            player.message(config.noPermission())
+            player.message(config.noPermission(), *placeholder)
             return
         }
 
         if (args.isEmpty()) {
-            player.message(config.use())
+            player.message(config.use(), *placeholder)
             return
         }
         val kicked = args[0]
 
         if (kicked.equals(sender, ignoreCase = true)) {
-            player.message(config.cannotSelf())
+            player.message(config.cannotSelf(), *placeholder)
             return
         }
 
@@ -306,22 +329,255 @@ class ClanCommand : BaseCommand() {
             return
         }
 
+        placeholder = placeholder.plus(kickedUser.placeholder("kicked"))
+
         if (user.role.weight < kickedUser.role.weight) {
-            player.message(config.playerBigger())
+            player.message(config.playerBigger(), *placeholder)
             return
         }
 
         if (user.role.weight == kickedUser.role.weight) {
-            player.message(config.playerEquals())
+            player.message(config.playerEquals(), *placeholder)
             return
         }
 
         ClanApi.removeUser(kickedUser.name)
-        ClanApi.sendResultMessage(sender, kickedUser.name, clan, config.successForKickedPlayer())
-        player.message(config.success())
+        ClanApi.sendResultMessage(sender, kickedUser.name, clan, config.successForKickedPlayer(), *placeholder)
+        player.message(config.success(), *placeholder)
     }
 
-    private val admin = commands.admin()
+    @Subcommand("%clan_command_members")
+    @CommandCompletion("@nothing")
+    fun members(player: Player) {
+        val config = commands.members()
+
+        fun sendMembers(clan: Clan) {
+            val placeholder = clan.placeholder()
+            val users = clan.users().sortedWith(compareByDescending<User> { it.role.weight }.thenBy { it.name })
+
+            player.message(config.header(), *placeholder)
+            users.forEachIndexed { index, user ->
+                player.message(config.format(), "count" to index + 1, "name" to user.name, "role" to user.role.displayName)
+            }
+            player.message(config.footer(), *placeholder)
+        }
+
+        val user = ClanApi.user(player.name)
+        val clan = user?.clan()
+        if (clan == null) {
+            player.message(config.noClan())
+            return
+        }
+
+        sendMembers(clan)
+    }
+
+    @Subcommand("%clan_command_info")
+    @CommandCompletion("@clan @nothing")
+    fun info(player: Player, args: Array<String>) {
+        val config = commands.info()
+
+        fun sendInfo(clan: Clan) {
+            player.message(config.value(), *clan.placeholder())
+        }
+
+        if (args.isEmpty()) {
+            val user = ClanApi.user(player.name)
+            val clan = user?.clan()
+            if (clan == null) {
+                player.message(config.use())
+                return
+            }
+            sendInfo(clan)
+        } else {
+            val clanName = args[0]
+            val clan = ClanApi.clan(clanName)
+            if (clan == null) {
+                player.message(config.notFoundClan())
+                return
+            }
+            sendInfo(clan)
+        }
+    }
+
+    @Subcommand("%clan_command_role_increase")
+    @CommandCompletion("@playerinmyclan @nothing")
+    fun roleIncrease(player: Player, args: Array<String>) {
+        val config = commands.roleIncrease()
+
+        val user = ClanApi.user(player.name)
+        val clan = user?.clan()
+        if (clan == null) {
+            player.message(config.noClan())
+            return
+        }
+
+        var placeholder = arrayOf(*clan.placeholder(), *user.placeholder())
+
+        if (!user.hasPermission(ClanPermission.ROLE_INCREASE)) {
+            player.message(config.noPermission(), *placeholder)
+            return
+        }
+
+        if (args.isEmpty()) {
+            player.message(config.use(), *placeholder)
+            return
+        }
+        val increase = args[0]
+
+        if (player.name.equals(increase, ignoreCase = true)) {
+            player.message(config.cannotSelf(), *placeholder)
+            return
+        }
+
+        val increaseUser = ClanApi.user(increase)
+        if (increaseUser == null) {
+            player.message(config.playerNotClan(), *placeholder)
+            return
+        }
+
+        placeholder = placeholder.plus(increaseUser.placeholder("increase"))
+
+        if (user.role.weight < increaseUser.role.weight) {
+            player.message(config.playerBigger(), *placeholder)
+            return
+        }
+
+        if (user.role.weight == increaseUser.role.weight) {
+            player.message(config.playerEquals(), *placeholder)
+            return
+        }
+
+        if (increaseUser.role.weight >= ClanRole.OWNER.weight - 1) {
+            player.message(config.alreadyMax(), *placeholder)
+            return
+        }
+
+        val nextRole = ClanRole.role(increaseUser.role.weight + 1)
+        if (nextRole == null) {
+            player.message(config.alreadyMax(), *placeholder)
+            return
+        }
+
+        ClanApi.updateUser(increaseUser) {
+            role = nextRole
+        }
+        player.message(config.success(), *placeholder, "clan_role" to nextRole.displayName)
+        ClanApi.sendResultMessage(user.name, increaseUser.name, clan, config.successForPlayer(), *placeholder, "clan_role" to nextRole.displayName)
+    }
+
+    @Subcommand("%clan_command_role_decrease")
+    @CommandCompletion("@playerinmyclan @nothing")
+    fun roleDecrease(player: Player, args: Array<String>) {
+        val config = commands.roleDecrease()
+
+        val user = ClanApi.user(player.name)
+        val clan = user?.clan()
+        if (clan == null) {
+            player.message(config.noClan())
+            return
+        }
+
+        var placeholder = arrayOf(*clan.placeholder(), *user.placeholder())
+
+        if (!user.hasPermission(ClanPermission.ROLE_DECREASE)) {
+            player.message(config.noPermission(), *placeholder)
+            return
+        }
+
+        if (args.isEmpty()) {
+            player.message(config.use(), *placeholder)
+            return
+        }
+        val decrease = args[0]
+
+        if (player.name.equals(decrease, ignoreCase = true)) {
+            player.message(config.cannotSelf(), *placeholder)
+            return
+        }
+
+        val decreaseUser = ClanApi.user(decrease)
+        if (decreaseUser == null) {
+            player.message(config.playerNotClan(), *placeholder)
+            return
+        }
+
+        placeholder = placeholder.plus(decreaseUser.placeholder("decrease"))
+
+        if (user.role.weight < decreaseUser.role.weight) {
+            player.message(config.playerBigger(), *placeholder)
+            return
+        }
+
+        if (user.role.weight == decreaseUser.role.weight) {
+            player.message(config.playerEquals(), *placeholder)
+            return
+        }
+
+        if (ClanRole.DEFAULT.weight >= decreaseUser.role.weight) {
+            player.message(config.alreadyMin(), *placeholder)
+            return
+        }
+
+        val prevRole = ClanRole.role(decreaseUser.role.weight - 1)
+        if (prevRole == null) {
+            player.message(config.alreadyMin(), *placeholder)
+            return
+        }
+
+        ClanApi.updateUser(decreaseUser) {
+            role = prevRole
+        }
+        player.message(config.success(), *placeholder, "clan_role" to prevRole.displayName)
+        ClanApi.sendResultMessage(user.name, decreaseUser.name, clan, config.successForPlayer(), *placeholder, "clan_role" to prevRole.displayName)
+    }
+
+    @Subcommand("%clan_command_tag")
+    @CommandCompletion("@nothing")
+    fun tag(player: Player, args: Array<String>) {
+        val config = commands.tag()
+
+        val user = ClanApi.user(player.name)
+        var clan = user?.clan()
+        if (user == null || clan == null) {
+            player.message(config.noClan())
+            return
+        }
+
+        val placeholder = arrayOf(*clan.placeholder(), *user.placeholder())
+
+        if (!user.hasPermission(ClanPermission.SET_TAG)) {
+            player.message(config.noPermission(), *placeholder)
+            return
+        }
+
+        if (args.isEmpty()) {
+            player.message(config.use(), *placeholder)
+            return
+        }
+        val tag = args[0]
+
+        if (ClanApi.clans { it.tag.equals(tag, true) }.isNotEmpty()) {
+            player.message(config.tagUsed(), *placeholder)
+            return
+        }
+
+        player.withdrawMoney(
+            amount = this.config.economy().createClan(),
+            success = { p ->
+                clan = ClanApi.updateClan(clan!!) {
+                    this.tag = tag
+                }
+                p.message(config.success(), *clan.placeholder(), *user.placeholder())
+            },
+            fail = { p ->
+                p.message(config.noMoney(), *clan.placeholder(), *user.placeholder(), "money" to p.getMoney())
+            }
+        )
+    }
+
+    private val admin
+        get() = commands.admin()
 
     @Subcommand("admin create")
     @CommandPermission("snapiclans.admin.create")
@@ -333,7 +589,7 @@ class ClanCommand : BaseCommand() {
             commandSender.message(config.use())
             return
         }
-        val nameClan = args[0]
+        val clanName = args[0]
         val owner = args[1]
 
         if (ClanApi.user(owner)?.clan() != null) {
@@ -341,12 +597,12 @@ class ClanCommand : BaseCommand() {
             return
         }
 
-        if (ClanApi.clan(nameClan) != null) {
+        if (ClanApi.clan(clanName) != null) {
             commandSender.message(config.clanAlreadyCreate())
             return
         }
 
-        ClanApi.createClan(nameClan, owner)
+        ClanApi.createClan(clanName, owner)
         commandSender.message(config.success())
     }
 
@@ -360,14 +616,42 @@ class ClanCommand : BaseCommand() {
             commandSender.message(config.use())
             return
         }
-        val nameClan = args[0]
+        val clanName = args[0]
 
-        if (ClanApi.clan(nameClan) == null) {
+        if (ClanApi.clan(clanName) == null) {
             commandSender.message(config.clanNotCreate())
             return
         }
 
-        ClanApi.removeClan(nameClan)
+        ClanApi.removeClan(clanName)
+        commandSender.message(config.success())
+    }
+
+    @Subcommand("admin createuser")
+    @CommandPermission("snapiclans.admin.createuser")
+    @CommandCompletion("@nothing")
+    fun adminCreateUser(commandSender: CommandSender, args: Array<String>) {
+        val config = admin.createUser()
+
+        if (args.size < 3) {
+            commandSender.message(config.use())
+            return
+        }
+        val clanName = args[0]
+        val username = args[1]
+        val role = ClanRole.role(args[2])
+
+        if (ClanApi.clan(clanName) == null) {
+            commandSender.message(config.clanNotCreate())
+            return
+        }
+
+        if (ClanApi.user(username) != null) {
+            commandSender.message(config.userAlreadyInClan())
+            return
+        }
+
+        ClanApi.createUser(username, clanName, role)
         commandSender.message(config.success())
     }
 
