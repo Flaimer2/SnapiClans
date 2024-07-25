@@ -127,7 +127,7 @@ interface MessageConfig {
             fun alreadyInvite(): String
 
             @ConfKey("player-level-low")
-            @DefaultString("У игрока низкий уровень. Ему нужен 7")
+            @DefaultString("У вас низкий уровень. Вам нужен 7")
             fun playerLevelLow(): String
 
             @ConfKey("accept-or-decline")

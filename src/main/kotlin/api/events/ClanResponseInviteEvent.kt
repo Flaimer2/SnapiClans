@@ -2,9 +2,10 @@ package ru.snapix.clan.api.events
 
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
-import ru.snapix.clan.api.Clan
+import ru.snapix.clan.api.Invite
+import ru.snapix.clan.api.InviteStatus
 
-class ChatMessageEvent(val sender: String, val receiver: Clan, val message: String) : Event() {
+class ClanResponseInviteEvent(val invite: Invite, val status: InviteStatus) : Event() {
     override fun getHandlers(): HandlerList {
         return HANDLERS
     }

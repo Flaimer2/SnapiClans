@@ -1,35 +1,23 @@
 package ru.snapix.clan.commands
 
 import ru.snapix.clan.api.ClanApi
+import ru.snapix.clan.plugin
 import ru.snapix.clan.settings.Settings
-import ru.snapix.clan.snapiClan
-import ru.snapix.library.addReplacements
-import ru.snapix.library.libs.commands.PaperCommandManager
-import ru.snapix.library.players
+import ru.snapix.library.SnapiLibrary
+import ru.snapix.library.bukkit.BukkitCommands
+import ru.snapix.library.bukkit.utils.addReplacements
 
-object Commands {
-    private val manager = PaperCommandManager(snapiClan)
-
-    fun enable() {
-        registerCommandCompletions()
-        registerCommandReplacements()
-        manager.registerCommand(ClanCommand())
-    }
-
-    fun disable() {
-        manager.unregisterCommands()
-    }
-
-    private fun registerCommandCompletions() {
+object Commands : BukkitCommands(plugin, ClanCommand()) {
+    override fun registerCommandCompletions() {
         val commandCompletions = manager.commandCompletions
         commandCompletions.registerAsyncCompletion("playerwithoutclan") { context ->
-            val players = players().toMutableList()
+            val players = SnapiLibrary.getOnlinePlayers().map { it.getName() }.toMutableList()
             players.removeAll(ClanApi.users().map { it.name })
             players.remove(context.player.name)
             players
         }
         commandCompletions.registerAsyncCompletion("playerwithoutclanforinvite") { context ->
-            val players = players().toMutableList()
+            val players = SnapiLibrary.getOnlinePlayers().map { it.getName() }.toMutableList()
             players.removeAll(ClanApi.users().map { it.name })
             if (players.contains(context.player.name)) emptyList<String>() else players
         }
@@ -49,7 +37,7 @@ object Commands {
         }
     }
 
-    private fun registerCommandReplacements() {
+    override fun registerCommandReplacements() {
         val config = Settings.config.alias()
 
         manager.commandReplacements.addReplacements("clan_command_",

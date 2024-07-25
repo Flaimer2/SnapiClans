@@ -1,5 +1,6 @@
 package ru.snapix.clan.api
 
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -10,15 +11,19 @@ import me.clip.placeholderapi.PlaceholderAPI
 import org.bukkit.ChatColor
 import org.bukkit.entity.Player
 import ru.snapix.clan.KEY_REDIS_INVITE
+import ru.snapix.clan.api.events.ClanResponseInviteEvent
 import ru.snapix.clan.caches.Clans
+import ru.snapix.clan.caches.Users
 import ru.snapix.clan.database.ClanDatabase
-import ru.snapix.clan.messenger.Messenger
-import ru.snapix.clan.messenger.actions.ChatMessageAction
-import ru.snapix.clan.messenger.actions.ResponseInviteAction
-import ru.snapix.clan.messenger.actions.ResultMessageAction
 import ru.snapix.clan.settings.Settings
-import ru.snapix.library.redis.async
-import ru.snapix.library.redis.redisClient
+import ru.snapix.library.bukkit.utils.callEvent
+import ru.snapix.library.bukkit.utils.sendMessage
+import ru.snapix.library.network.player.OfflineNetworkPlayer
+import ru.snapix.library.network.player.OnlineNetworkPlayer
+import ru.snapix.library.utils.async
+import ru.snapix.library.utils.redisClient
+import ru.snapix.library.utils.stripColor
+import ru.snapix.library.utils.translateAlternateColorCodes
 import kotlin.time.Duration.Companion.seconds
 
 object ClanApi {
@@ -26,7 +31,7 @@ object ClanApi {
         val clan = Clan(name = name, owner = owner, maxMembers = Settings.config.maxMembers(), dateCreation = System.currentTimeMillis())
 
         ClanDatabase.createClan(clan)
-        Clans.updateClan(name)
+        Clans.update(clan)
 
         createUser(name = owner, clanName = name, role = ClanRole.OWNER)
     }
@@ -35,28 +40,28 @@ object ClanApi {
         val user = User(name = name, clanName = clanName, role = role)
 
         ClanDatabase.createUser(user)
-        Clans.updateUser(user)
+        Users.update(user)
     }
 
     fun removeClan(name: String) {
-        val clan = Clans.getClan(name)
+        val clan = Clans[name]
 
         ClanDatabase.removeClan(name)
-        Clans.updateClan(name)
+        Clans.update(name)
 
-        clan?.users()?.forEach { Clans.updateUser(it) }
+        clan?.users()?.forEach { Users.update(it.name) }
     }
 
     fun removeUser(name: String) {
         ClanDatabase.removeUser(name)
-        Clans.updateUser(name)
+        Users.update(name)
     }
 
     fun updateClan(clan: Clan, block: Clan.() -> Unit): Clan {
         clan.block()
 
         ClanDatabase.updateClan(clan)
-        Clans.updateClan(clan)
+        Clans.update(clan)
 
         return clan
     }
@@ -70,7 +75,7 @@ object ClanApi {
         user.block()
 
         ClanDatabase.updateUser(user)
-        Clans.updateUser(user)
+        Users.update(user)
 
         return user
     }
@@ -81,19 +86,19 @@ object ClanApi {
     }
 
     fun clan(name: String): Clan? {
-        return Clans.getClan(name)
+        return Clans[name]
     }
 
     fun user(name: String): User? {
-        return Clans.getUser(name)
+        return Users[name]
     }
 
     fun clans(): List<Clan> {
-        return Clans.getClans()
+        return Clans.values()
     }
 
     fun users(): List<User> {
-        return Clans.getUsers()
+        return Users.values()
     }
 
     fun clans(block: (Clan) -> Boolean): List<Clan> {
@@ -106,16 +111,12 @@ object ClanApi {
 
     fun sendChatMessage(sender: Player, receiver: Clan, message: String) {
         val format = Settings.config.chatFormat()
-        val msg = if (!sender.hasPermission("snapiclans.chat.color")) "&([A-z0-9])".toRegex()
-            .replace(message, "") else ChatColor.translateAlternateColorCodes('&', message)
-        val result = ChatColor.translateAlternateColorCodes('&', PlaceholderAPI.setPlaceholders(sender, format)).replace("%message%", msg)
-        Messenger.sendOutgoingMessage(ChatMessageAction(sender.name, receiver, result))
-    }
 
-    fun sendResultMessage(sender: String, receiver: String, clan: Clan, message: String, vararg pairs: Pair<String, Any>) {
-        var result = message
-        pairs.forEach { result = result.replace("%${it.first}%", it.second.toString(), ignoreCase = true) }
-        Messenger.sendOutgoingMessage(ResultMessageAction(sender, receiver, clan, result))
+        val msg = if (!sender.hasPermission("snapiclans.chat.color")) stripColor(message) else translateAlternateColorCodes('&', message)
+        val result = translateAlternateColorCodes('&', PlaceholderAPI.setPlaceholders(sender, format)).replace("%message%", msg)
+
+        val networkPlayers = listOf(OnlineNetworkPlayer(sender.name), *receiver.users().map { OfflineNetworkPlayer(it.name) }.toTypedArray())
+        networkPlayers.sendMessage(result)
     }
 
     fun sendInvite(clan: Clan, sender: String, receiver: String) {
@@ -131,16 +132,11 @@ object ClanApi {
 
                 val user = user(receiver)
                 if (user == null || user.clan() != clan) {
-                    Messenger.sendOutgoingMessage(
-                        ResponseInviteAction(
-                            invite,
-                            InviteStatus.IGNORE
-                        )
-                    )
+                    callEvent(ClanResponseInviteEvent(invite, InviteStatus.IGNORE))
                 }
             }
         }
-        sendResultMessage(sender, receiver, clan, Settings.message.commands().invite().acceptOrDecline(), "name" to sender, "clan" to clan)
+        OfflineNetworkPlayer(receiver).sendMessage(Settings.message.commands().invite().acceptOrDecline(), "name" to sender, "clan" to clan)
     }
 
     fun acceptInvite(invite: Invite) {
@@ -148,14 +144,14 @@ object ClanApi {
             srem(KEY_REDIS_INVITE, Json.encodeToString(invite))
         }
         createUser(invite.receiver, invite.clan.name)
-        Messenger.sendOutgoingMessage(ResponseInviteAction(invite, InviteStatus.ACCEPT))
+        callEvent(ClanResponseInviteEvent(invite, InviteStatus.ACCEPT))
     }
 
     fun declineInvite(invite: Invite) {
         redisClient.async {
             srem(KEY_REDIS_INVITE, Json.encodeToString(invite))
         }
-        Messenger.sendOutgoingMessage(ResponseInviteAction(invite, InviteStatus.DECLINE))
+        callEvent(ClanResponseInviteEvent(invite, InviteStatus.DECLINE))
     }
 
     fun getInvite(sender: String, receiver: String): Invite? {
