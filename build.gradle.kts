@@ -22,6 +22,19 @@ dependencies {
     compileOnly(files("libs/AlonsoLevels.jar"))
 }
 
+kotlin {
+    jvmToolchain(11)
+}
+
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+    options.compilerArgs.addAll(listOf("-XDenableSunApiLintControl"))
+}
+
+tasks.jar {
+    archiveFileName.set("${project.name}.jar")
+}
+
 bukkit {
     main = "ru.snapix.snapiclans.SnapiClan"
     author = "SnapiX"
