@@ -21,7 +21,7 @@ dependencies {
     compileOnly("com.destroystokyo.paper:paper-api:1.12.2-R0.1-SNAPSHOT")
     compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
-    compileOnly("ru.snapix:snapilibrary-bukkit:1.4.1")
+    compileOnly("ru.snapix:snapilibrary-bukkit:1.9")
 }
 
 kotlin {

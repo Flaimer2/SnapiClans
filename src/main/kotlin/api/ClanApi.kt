@@ -77,9 +77,7 @@ object ClanApi {
 
     fun updateUser(name: String, block: User.() -> Unit): User? {
         val user = user(name) ?: return null
-        updateUser(user, block)
-
-        return user
+        return updateUser(user, block)
     }
 
     fun clan(name: String): Clan? {

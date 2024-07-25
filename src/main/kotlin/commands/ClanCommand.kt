@@ -7,13 +7,8 @@ import ru.snapix.clan.placeholder
 import ru.snapix.clan.settings.Settings
 import ru.snapix.clan.snapiClan
 import ru.snapix.library.*
-import ru.snapix.library.libs.commands.BaseCommand
-import ru.snapix.library.libs.commands.annotation.CatchUnknown
-import ru.snapix.library.libs.commands.annotation.CommandAlias
-import ru.snapix.library.libs.commands.annotation.CommandCompletion
-import ru.snapix.library.libs.commands.annotation.CommandPermission
-import ru.snapix.library.libs.commands.annotation.Default
-import ru.snapix.library.libs.commands.annotation.Subcommand
+import ru.snapix.library.libs.commands.*
+import ru.snapix.library.libs.commands.annotation.*
 
 @CommandAlias("%clan_command_main")
 class ClanCommand : BaseCommand() {
