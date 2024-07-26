@@ -30,4 +30,3 @@ fun Invite?.placeholder(): Array<Pair<String, Any>> {
         *clan.placeholder()
     ) else emptyArray()
 }
-

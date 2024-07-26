@@ -156,4 +156,8 @@ interface MainConfig {
     @ConfKey("invite-reply-seconds")
     @DefaultInteger(20)
     fun inviteReplySeconds(): Int
+
+    @ConfKey("limit-invite-for-clan")
+    @DefaultInteger(5)
+    fun limitInviteForClan(): Int
 }

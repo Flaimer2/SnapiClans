@@ -127,12 +127,16 @@ interface MessageConfig {
             fun alreadyInvite(): String
 
             @ConfKey("player-level-low")
-            @DefaultString("У игрока низкий уровень. Ему нужен 7")
+            @DefaultString("У вас низкий уровень. Вам нужен 7")
             fun playerLevelLow(): String
 
             @ConfKey("accept-or-decline")
             @DefaultString("&aНажмите, чтобы ответить на приглашение (clans accept player, clans decline player)")
             fun acceptOrDecline(): String
+
+            @ConfKey("limit-invite-for-clan")
+            @DefaultString("&aЛимит для приглашение в клан для клана исчерпан")
+            fun limitInviteForClan(): String
 
             @ConfKey("success")
             @DefaultString("&aВы отправили приглашение")

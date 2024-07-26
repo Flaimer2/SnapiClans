@@ -2,13 +2,11 @@ package ru.snapix.clan
 
 import org.bukkit.plugin.java.JavaPlugin
 import ru.snapix.clan.caches.Clans
+import ru.snapix.clan.caches.Users
 import ru.snapix.clan.commands.Commands
 import ru.snapix.clan.database.ClanDatabase
-import ru.snapix.clan.listeners.ChatListener
-import ru.snapix.clan.messenger.Messenger
-import ru.snapix.clan.settings.Settings
-import ru.snapix.library.ServerType
-import ru.snapix.library.snapiLibrary
+import ru.snapix.clan.listeners.ClanListener
+import ru.snapix.library.network.ServerType
 
 class SnapiClan : JavaPlugin() {
     override fun onLoad() {
@@ -18,28 +16,20 @@ class SnapiClan : JavaPlugin() {
     override fun onEnable() {
         ClanDatabase.load()
         Commands.enable()
-        Messenger.enable()
 
-        if (snapiLibrary.serverType == ServerType.LOBBY) {
-            ClanDatabase.clans().forEach { Clans.updateClan(it) }
-            ClanDatabase.users().forEach { Clans.updateUser(it) }
+        if (ru.snapix.library.bukkit.plugin.serverType == ServerType.LOBBY) {
+            ClanDatabase.clans().forEach { Clans.update(it) }
+            ClanDatabase.users().forEach { Users.update(it) }
         }
 
-        server.pluginManager.registerEvents(ChatListener(), this)
+        server.pluginManager.registerEvents(ClanListener(), this)
         ClanExpansion().register()
     }
 
-    fun reload() {
-        Settings.reload()
-    }
-
     companion object {
-        @JvmStatic
         lateinit var instance: SnapiClan
-            private set
     }
 }
 
-val snapiClan = SnapiClan.instance
-const val KEY_REDIS_MESSENGER = "snapiclan"
-const val KEY_REDIS_INVITE = "clan_invite"
+val plugin = SnapiClan.instance
+const val KEY_REDIS_INVITE = "clan-invite"

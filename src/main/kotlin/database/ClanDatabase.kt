@@ -81,17 +81,13 @@ object ClanDatabase {
 
     fun clan(name: String): Clan? {
         return transaction(database) {
-            ClanTable.selectAll().where { ClanTable.name eq name }.map {
-                it.toClan()
-            }
+            ClanTable.selectAll().where { ClanTable.name eq name }.map(::toClan)
         }.firstOrNull()
     }
 
     fun user(username: String): User? {
         return transaction(database) {
-            UserTable.selectAll().where { UserTable.username eq username }.map {
-               it.toUser()
-            }
+            UserTable.selectAll().where { UserTable.username eq username }.map(::toUser)
         }.firstOrNull()
     }
 
@@ -115,21 +111,21 @@ object ClanDatabase {
 
     fun clans(): List<Clan> {
         return transaction(database) {
-            ClanTable.selectAll().map { it.toClan() }
+            ClanTable.selectAll().map(::toClan)
         }
     }
 
     fun users(): List<User> {
         return transaction(database) {
-            UserTable.selectAll().map { it.toUser() }
+            UserTable.selectAll().map(::toUser)
         }
     }
 
-    private fun ResultRow.toClan(): Clan {
-        return Clan(this[ClanTable.name], this[ClanTable.owner], this[ClanTable.maxMembers], this[ClanTable.tag], this[ClanTable.dateCreation])
+    private fun toClan(row: ResultRow): Clan {
+        return Clan(row[ClanTable.name], row[ClanTable.owner], row[ClanTable.maxMembers], row[ClanTable.tag], row[ClanTable.dateCreation])
     }
 
-    private fun ResultRow.toUser(): User {
-        return User(this[UserTable.username], ClanRole.role(this[UserTable.role]), this[UserTable.clanName])
+    private fun toUser(row: ResultRow): User {
+        return User(row[UserTable.username], ClanRole.role(row[UserTable.role]), row[UserTable.clanName])
     }
 }

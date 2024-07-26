@@ -1,29 +1,31 @@
 package ru.snapix.clan.commands
 
+import com.alonsoaliaga.alonsolevels.api.AlonsoLevelsAPI
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import ru.snapix.clan.api.*
 import ru.snapix.clan.placeholder
 import ru.snapix.clan.settings.Settings
-import ru.snapix.clan.snapiClan
-import ru.snapix.library.*
-import ru.snapix.library.libs.commands.*
+import ru.snapix.library.bukkit.utils.getMoney
+import ru.snapix.library.bukkit.utils.withdrawMoney
+import ru.snapix.library.libs.commands.BaseCommand
 import ru.snapix.library.libs.commands.annotation.*
+import ru.snapix.library.network.player.OfflineNetworkPlayer
+import ru.snapix.library.utils.message
+import ru.snapix.library.utils.translateAlternateColorCodes
 
 @CommandAlias("%clan_command_main")
 class ClanCommand : BaseCommand() {
-    private val config
-        get() = Settings.config
-    private val message
-        get() = Settings.message
-    private val commands
-        get() = message.commands()
+    private val config get() = Settings.config
+    private val message get() = Settings.message
+    private val commands get() = message.commands()
 
     @CatchUnknown
     @Default
     @Subcommand("%clan_command_help")
+    @CommandCompletion("@nothing")
     fun help(sender: CommandSender) {
-        sender.message(commands.help())
+        sender.sendMessage(commands.help().map { translateAlternateColorCodes(it) }.toTypedArray())
     }
 
     @Subcommand("%clan_command_create")
@@ -53,8 +55,7 @@ class ClanCommand : BaseCommand() {
             return
         }
 
-        val networkPlayer = player.toNetworkPlayer()
-        if (networkPlayer.getLevel() < this.config.level().createClan()) {
+        if (AlonsoLevelsAPI.getLevel(player.uniqueId) < this.config.level().createClan()) {
             player.message(config.levelLow())
             return
         }
@@ -156,23 +157,17 @@ class ClanCommand : BaseCommand() {
             return
         }
 
-        val networkReceiver = NetworkPlayer(receiver)
+        val networkReceiver = OfflineNetworkPlayer(receiver)
 
-        if (!networkReceiver.isExist()) {
+        if (!networkReceiver.hasPlayedBefore()) {
             player.message(config.notExist(), "receiver" to receiver, *placeholder)
             return
         }
 
-        receiver = networkReceiver.name()
+        receiver = networkReceiver.getName()
 
         if (!networkReceiver.isOnline()) {
             player.message(config.offline(), "receiver" to receiver, *placeholder)
-            return
-        }
-
-        val level = networkReceiver.getLevel()
-        if (level < this.config.level().joinClan()) {
-            player.message(config.playerLevelLow(), "receiver" to receiver, "level" to level, *placeholder)
             return
         }
 
@@ -186,6 +181,13 @@ class ClanCommand : BaseCommand() {
             return
         }
 
+        val invites = clan.users().flatMap { ClanApi.getInviteBySender(it.name) }
+
+        if (invites.size >= this.config.limitInviteForClan()) {
+            player.message(config.limitInviteForClan())
+            return
+        }
+
         ClanApi.sendInvite(clan, sender, receiver)
         player.message(config.success(), "receiver" to receiver, *placeholder)
     }
@@ -195,6 +197,12 @@ class ClanCommand : BaseCommand() {
     fun accept(player: Player, args: Array<String>) {
         val config = commands.accept()
         val receiver = player.name
+
+        val level = AlonsoLevelsAPI.getLevel(player.uniqueId)
+        if (level < this.config.level().joinClan()) {
+            player.message(commands.invite().playerLevelLow(), "receiver" to receiver, "level" to level)
+            return
+        }
 
         if (ClanApi.user(receiver) != null) {
             player.message(config.alreadyClan())
@@ -337,7 +345,7 @@ class ClanCommand : BaseCommand() {
         }
 
         ClanApi.removeUser(kickedUser.name)
-        ClanApi.sendResultMessage(sender, kickedUser.name, clan, config.successForKickedPlayer(), *placeholder)
+        OfflineNetworkPlayer(kickedUser.name).sendMessage(config.successForKickedPlayer(), *placeholder)
         player.message(config.success(), *placeholder)
     }
 
@@ -350,11 +358,11 @@ class ClanCommand : BaseCommand() {
             val placeholder = clan.placeholder()
             val users = clan.users().sortedWith(compareByDescending<User> { it.role.weight }.thenBy { it.name })
 
-            player.message(config.header(), *placeholder)
+            config.header().forEach { player.message(it, *placeholder) }
             users.forEachIndexed { index, user ->
                 player.message(config.format(), "count" to index + 1, "name" to user.name, "role" to user.role.displayName)
             }
-            player.message(config.footer(), *placeholder)
+            config.footer().forEach { player.message(it, *placeholder) }
         }
 
         val user = ClanApi.user(player.name)
@@ -373,7 +381,7 @@ class ClanCommand : BaseCommand() {
         val config = commands.info()
 
         fun sendInfo(clan: Clan) {
-            player.message(config.value(), *clan.placeholder())
+            config.value().forEach { player.message(it, *clan.placeholder()) }
         }
 
         if (args.isEmpty()) {
@@ -458,7 +466,7 @@ class ClanCommand : BaseCommand() {
             role = nextRole
         }
         player.message(config.success(), *placeholder, "clan_role" to nextRole.displayName)
-        ClanApi.sendResultMessage(user.name, increaseUser.name, clan, config.successForPlayer(), *placeholder, "clan_role" to nextRole.displayName)
+        OfflineNetworkPlayer(increaseUser.name).sendMessage(config.successForPlayer(), *placeholder, "clan_role" to nextRole.displayName)
     }
 
     @Subcommand("%clan_command_role_decrease")
@@ -524,7 +532,7 @@ class ClanCommand : BaseCommand() {
             role = prevRole
         }
         player.message(config.success(), *placeholder, "clan_role" to prevRole.displayName)
-        ClanApi.sendResultMessage(user.name, decreaseUser.name, clan, config.successForPlayer(), *placeholder, "clan_role" to prevRole.displayName)
+        OfflineNetworkPlayer(decreaseUser.name).sendMessage(config.successForPlayer(), *placeholder, "clan_role" to prevRole.displayName)
     }
 
     @Subcommand("%clan_command_tag")
@@ -558,7 +566,7 @@ class ClanCommand : BaseCommand() {
         }
 
         player.withdrawMoney(
-            amount = this.config.economy().createClan(),
+            amount = this.config.economy().tag(),
             success = { p ->
                 clan = ClanApi.updateClan(clan!!) {
                     this.tag = tag
@@ -581,24 +589,24 @@ class ClanCommand : BaseCommand() {
         val config = admin.create()
 
         if (args.size < 2) {
-            commandSender.message(config.use())
+            commandSender.sendMessage(translateAlternateColorCodes(config.use()))
             return
         }
         val clanName = args[0]
         val owner = args[1]
 
         if (ClanApi.user(owner)?.clan() != null) {
-            commandSender.message(config.alreadyInClan())
+            commandSender.sendMessage(translateAlternateColorCodes(config.alreadyInClan()))
             return
         }
 
         if (ClanApi.clan(clanName) != null) {
-            commandSender.message(config.clanAlreadyCreate())
+            commandSender.sendMessage(translateAlternateColorCodes(config.clanAlreadyCreate()))
             return
         }
 
         ClanApi.createClan(clanName, owner)
-        commandSender.message(config.success())
+        commandSender.sendMessage(translateAlternateColorCodes(config.success()))
     }
 
     @Subcommand("admin disband")
@@ -608,18 +616,18 @@ class ClanCommand : BaseCommand() {
         val config = admin.disband()
 
         if (args.isEmpty()) {
-            commandSender.message(config.use())
+            commandSender.sendMessage(translateAlternateColorCodes(config.use()))
             return
         }
         val clanName = args[0]
 
         if (ClanApi.clan(clanName) == null) {
-            commandSender.message(config.clanNotCreate())
+            commandSender.sendMessage(translateAlternateColorCodes(config.clanNotCreate()))
             return
         }
 
         ClanApi.removeClan(clanName)
-        commandSender.message(config.success())
+        commandSender.sendMessage(translateAlternateColorCodes(config.success()))
     }
 
     @Subcommand("admin createuser")
@@ -629,7 +637,7 @@ class ClanCommand : BaseCommand() {
         val config = admin.createUser()
 
         if (args.size < 3) {
-            commandSender.message(config.use())
+            commandSender.sendMessage(translateAlternateColorCodes(config.use()))
             return
         }
         val clanName = args[0]
@@ -637,17 +645,17 @@ class ClanCommand : BaseCommand() {
         val role = ClanRole.role(args[2])
 
         if (ClanApi.clan(clanName) == null) {
-            commandSender.message(config.clanNotCreate())
+            commandSender.sendMessage(translateAlternateColorCodes(config.clanNotCreate()))
             return
         }
 
         if (ClanApi.user(username) != null) {
-            commandSender.message(config.userAlreadyInClan())
+            commandSender.sendMessage(translateAlternateColorCodes(config.userAlreadyInClan()))
             return
         }
 
         ClanApi.createUser(username, clanName, role)
-        commandSender.message(config.success())
+        commandSender.sendMessage(translateAlternateColorCodes(config.success()))
     }
 
     @Subcommand("admin reload")
@@ -656,7 +664,7 @@ class ClanCommand : BaseCommand() {
     fun reload(commandSender: CommandSender) {
         val config = admin.reload()
 
-        snapiClan.reload()
-        commandSender.message(config.success())
+        Settings.reload()
+        commandSender.sendMessage(translateAlternateColorCodes(config.success()))
     }
 }
