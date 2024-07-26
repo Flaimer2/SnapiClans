@@ -181,6 +181,13 @@ class ClanCommand : BaseCommand() {
             return
         }
 
+        val invites = clan.users().flatMap { ClanApi.getInviteBySender(it.name) }
+
+        if (invites.size >= this.config.limitInviteForClan()) {
+            player.message(config.limitInviteForClan())
+            return
+        }
+
         ClanApi.sendInvite(clan, sender, receiver)
         player.message(config.success(), "receiver" to receiver, *placeholder)
     }

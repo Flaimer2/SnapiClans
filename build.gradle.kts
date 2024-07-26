@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.jvm)
     alias(libs.plugins.plugin.yml.bukkit)
     alias(libs.plugins.serialization)
+    `maven-publish`
 }
 
 group = "ru.snapix"
@@ -36,8 +37,19 @@ tasks.jar {
 }
 
 bukkit {
-    main = "ru.snapix.snapiclans.SnapiClan"
+    main = "ru.snapix.clan.SnapiClan"
     author = "SnapiX"
     website = "https://mcsnapix.ru"
     depend = listOf("SnapiLibrary")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            artifactId = project.name.lowercase()
+            groupId = group.toString()
+
+            from(components["java"])
+        }
+    }
 }

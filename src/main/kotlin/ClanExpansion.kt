@@ -12,18 +12,18 @@ class ClanExpansion : PlaceholderExpansion() {
 
     override fun onPlaceholderRequest(player: Player, params: String): String? {
         val user = ClanApi.user(player.name)
-        val clan = user?.clan() ?: return null
+        val clan = user?.clan()
 
         return when (params) {
-            "name" -> clan.name
-            "owner" -> clan.owner
-            "max_members" -> clan.maxMembers.toString()
-            "date_creation" -> clan.formattedDateCreation()
-            "date_creation_raw" -> clan.dateCreation.toString()
-            "tag" -> clan.tag ?: return ""
-            "role" -> user.role.displayName
-            "role_raw" -> user.role.name
-            "weight" -> user.role.weight.toString()
+            "name" -> clan?.name ?: "&cНет клана"
+            "owner" -> clan?.owner ?: "&cНет владелец"
+            "max_members" -> clan?.maxMembers?.toString() ?: "4"
+            "date_creation" -> clan?.formattedDateCreation() ?: ""
+            "date_creation_raw" -> clan?.dateCreation?.toString() ?: ""
+            "tag" -> clan?.tag ?: ""
+            "role" -> user?.role?.displayName ?: "Участник"
+            "role_raw" -> user?.role?.name ?: "default"
+            "weight" -> user?.role?.weight?.toString() ?: "1"
             else -> null
         }
     }

@@ -134,6 +134,10 @@ interface MessageConfig {
             @DefaultString("&aНажмите, чтобы ответить на приглашение (clans accept player, clans decline player)")
             fun acceptOrDecline(): String
 
+            @ConfKey("limit-invite-for-clan")
+            @DefaultString("&aЛимит для приглашение в клан для клана исчерпан")
+            fun limitInviteForClan(): String
+
             @ConfKey("success")
             @DefaultString("&aВы отправили приглашение")
             fun success(): String
