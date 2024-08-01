@@ -37,7 +37,7 @@ object ClanApi {
     }
 
     fun createUser(name: String, clanName: String, role: ClanRole = ClanRole.DEFAULT) {
-        val user = User(name = name, clanName = clanName, role = role)
+        val user = User(name = name, clanName = clanName, role = role, dateJoin = System.currentTimeMillis())
 
         ClanDatabase.createUser(user)
         Users.update(user)

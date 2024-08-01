@@ -6,7 +6,7 @@ import org.bukkit.entity.Player
 import ru.snapix.clan.ClanRoleSerializer
 
 @Serializable
-data class User(val name: String, @Serializable(with = ClanRoleSerializer::class) var role: ClanRole, val clanName: String) {
+data class User(val name: String, @Serializable(with = ClanRoleSerializer::class) var role: ClanRole, val clanName: String, val dateJoin: Long) {
     fun clan(): Clan? = ClanApi.clan(clanName)
 
     fun hasPermission(permission: ClanPermission): Boolean {

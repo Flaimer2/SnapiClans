@@ -50,13 +50,13 @@ interface MainConfig {
         @DefaultString("chat")
         fun chatCommand(): String
 
-        @ConfKey("members-command")
-        @DefaultString("members")
-        fun membersCommand(): String
-
         @ConfKey("info-command")
         @DefaultString("info")
         fun infoCommand(): String
+
+        @ConfKey("list-command")
+        @DefaultString("list")
+        fun listCommand(): String
 
         @ConfKey("role-increase-command")
         @DefaultString("role increase")
@@ -115,6 +115,10 @@ interface MainConfig {
         @ConfKey("clan-name")
         @DefaultString("[A-z0-9]{3,16}")
         fun clanName(): String
+
+        @ConfKey("tag")
+        @DefaultString("[A-z0-9-<>]{3,5}")
+        fun tag(): String
     }
 
     @SubSection

@@ -3,16 +3,22 @@ package ru.snapix.clan.commands
 import com.alonsoaliaga.alonsolevels.api.AlonsoLevelsAPI
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
+import ru.snapix.clan.PanelStorage
 import ru.snapix.clan.api.*
 import ru.snapix.clan.placeholder
 import ru.snapix.clan.settings.Settings
+import ru.snapix.library.SnapiLibrary
+import ru.snapix.library.bukkit.SnapiLibraryBukkit
 import ru.snapix.library.bukkit.utils.getMoney
 import ru.snapix.library.bukkit.utils.withdrawMoney
 import ru.snapix.library.libs.commands.BaseCommand
 import ru.snapix.library.libs.commands.annotation.*
+import ru.snapix.library.network.ServerType
 import ru.snapix.library.network.player.OfflineNetworkPlayer
 import ru.snapix.library.utils.message
 import ru.snapix.library.utils.translateAlternateColorCodes
+import ru.snapix.profile.PanelStorage.otherProfile
+import ru.snapix.profile.PanelStorage.profile
 
 @CommandAlias("%clan_command_main")
 class ClanCommand : BaseCommand() {
@@ -20,8 +26,26 @@ class ClanCommand : BaseCommand() {
     private val message get() = Settings.message
     private val commands get() = message.commands()
 
-    @CatchUnknown
     @Default
+    fun default(player: Player, args: Array<String>) {
+        val config = Settings.message.commands().default()
+
+        if (args.isEmpty()) {
+            PanelStorage.clan(player)
+            return
+        }
+        val name = args[0]
+
+        val clan = ClanApi.clan(name)
+        if (clan == null) {
+            player.message(config.notFound())
+            return
+        }
+
+        PanelStorage.otherClan(player, clan)
+    }
+
+    @CatchUnknown
     @Subcommand("%clan_command_help")
     @CommandCompletion("@nothing")
     fun help(sender: CommandSender) {
@@ -349,40 +373,10 @@ class ClanCommand : BaseCommand() {
         player.message(config.success(), *placeholder)
     }
 
-    @Subcommand("%clan_command_members")
-    @CommandCompletion("@nothing")
-    fun members(player: Player) {
-        val config = commands.members()
-
-        fun sendMembers(clan: Clan) {
-            val placeholder = clan.placeholder()
-            val users = clan.users().sortedWith(compareByDescending<User> { it.role.weight }.thenBy { it.name })
-
-            config.header().forEach { player.message(it, *placeholder) }
-            users.forEachIndexed { index, user ->
-                player.message(config.format(), "count" to index + 1, "name" to user.name, "role" to user.role.displayName)
-            }
-            config.footer().forEach { player.message(it, *placeholder) }
-        }
-
-        val user = ClanApi.user(player.name)
-        val clan = user?.clan()
-        if (clan == null) {
-            player.message(config.noClan())
-            return
-        }
-
-        sendMembers(clan)
-    }
-
     @Subcommand("%clan_command_info")
     @CommandCompletion("@clan @nothing")
     fun info(player: Player, args: Array<String>) {
         val config = commands.info()
-
-        fun sendInfo(clan: Clan) {
-            config.value().forEach { player.message(it, *clan.placeholder()) }
-        }
 
         if (args.isEmpty()) {
             val user = ClanApi.user(player.name)
@@ -391,7 +385,7 @@ class ClanCommand : BaseCommand() {
                 player.message(config.use())
                 return
             }
-            sendInfo(clan)
+            PanelStorage.userList(player)
         } else {
             val clanName = args[0]
             val clan = ClanApi.clan(clanName)
@@ -399,8 +393,13 @@ class ClanCommand : BaseCommand() {
                 player.message(config.notFoundClan())
                 return
             }
-            sendInfo(clan)
+            PanelStorage.otherClan(player, clan)
         }
+    }
+
+    @Subcommand("%clan_command_list")
+    fun list(player: Player) {
+        PanelStorage.clans(player)
     }
 
     @Subcommand("%clan_command_role_increase")
@@ -559,6 +558,12 @@ class ClanCommand : BaseCommand() {
             return
         }
         val tag = args[0]
+
+        val regex = this.config.regex()
+        if (!regex.tag().toRegex().matches(tag)) {
+            player.message(config.tagInvalid())
+            return
+        }
 
         if (ClanApi.clans { it.tag.equals(tag, true) }.isNotEmpty()) {
             player.message(config.tagUsed(), *placeholder)

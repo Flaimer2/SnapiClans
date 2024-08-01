@@ -42,4 +42,13 @@ data class ClanRole(val name: String, val displayName: String, val weight: Int, 
             return map
         }
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is ClanRole) return false
+        return other.weight == weight
+    }
+
+    override fun hashCode(): Int {
+        return weight.hashCode()
+    }
 }

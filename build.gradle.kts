@@ -20,6 +20,9 @@ dependencies {
     compileOnly(libs.snapilibrary)
     compileOnly(libs.placeholderapi)
     compileOnly(libs.serialization)
+    compileOnly(libs.cooperation)
+    compileOnly(libs.profile)
+    compileOnly(libs.balancer)
     compileOnly(files("libs/AlonsoLevels.jar"))
 }
 

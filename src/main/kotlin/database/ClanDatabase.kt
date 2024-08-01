@@ -23,6 +23,7 @@ object UserTable : Table("clan_users") {
     val username = varchar("username", 32).uniqueIndex()
     val clanName = reference("clan_name", ClanTable.name, ReferenceOption.CASCADE)
     val role = varchar("role", 32)
+    val dateJoin = long("date_join")
 
     override val primaryKey = PrimaryKey(username)
 }
@@ -63,6 +64,7 @@ object ClanDatabase {
                 it[username] = user.name
                 it[clanName] = user.clanName
                 it[role] = user.role.name
+                it[dateJoin] = user.dateJoin
             }
         }
     }
@@ -126,6 +128,6 @@ object ClanDatabase {
     }
 
     private fun toUser(row: ResultRow): User {
-        return User(row[UserTable.username], ClanRole.role(row[UserTable.role]), row[UserTable.clanName])
+        return User(row[UserTable.username], ClanRole.role(row[UserTable.role]), row[UserTable.clanName], row[UserTable.dateJoin])
     }
 }

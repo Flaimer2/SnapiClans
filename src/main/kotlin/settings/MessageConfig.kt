@@ -29,6 +29,14 @@ interface MessageConfig {
         @DefaultStrings("Hello", "world??", "!")
         fun help(): List<String>
 
+        @SubSection
+        fun default(): Default
+        interface Default {
+            @ConfKey("not-found")
+            @DefaultString("Не найден клан")
+            fun notFound(): String
+        }
+
         @ConfKey("create-clan")
         @SubSection
         fun createClan(): CreateCommand
@@ -421,6 +429,10 @@ interface MessageConfig {
             @ConfKey("use")
             @DefaultString("&cИспользуйте: /clan tag тэг")
             fun use(): String
+
+            @ConfKey("tag-invalid")
+            @DefaultString("&cВы не правильно написали отображаемое название клана")
+            fun tagInvalid(): String
 
             @ConfKey("tag-used")
             @DefaultString("&cТэг уже используется")

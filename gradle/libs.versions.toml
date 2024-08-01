@@ -6,12 +6,18 @@ snapilibrary = "2.0.0"
 paper-api = "1.12.2-R0.1-SNAPSHOT"
 placeholderapi = "2.11.6"
 plugin-yml-bukkit = "0.6.0"
+cooperation = "1.0.0"
+profile = "1.0.0"
+balancer = "1.5"
 
 [libraries]
 snapilibrary = { module = "ru.snapix:snapilibrary-bukkit", version.ref = "snapilibrary" }
 serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 bukkit = { module = "com.destroystokyo.paper:paper-api", version.ref = "paper-api" }
 placeholderapi = { module = "me.clip:placeholderapi", version.ref = "placeholderapi" }
+cooperation = { module = "ru.snapix:snapicooperation", version.ref = "cooperation" }
+profile = { module = "ru.snapix:snapiprofile", version.ref = "profile" }
+balancer = { module = "ru.snapix:snapibalancer-bukkit", version.ref = "balancer" }
 
 [plugins]
 jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
